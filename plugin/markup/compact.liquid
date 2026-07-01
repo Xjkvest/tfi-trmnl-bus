@@ -1,0 +1,21 @@
+{% assign payload = IDX_0 | default: nil %}
+{% assign error_text = payload.error | default: error %}
+{% assign generated_at_text = payload.generated_at | default: generated_at %}
+{% assign stops_label_text = payload.stops_label | default: stops_label %}
+{% assign departures_list = payload.departures | default: departures %}
+{% assign message_text = payload.message | default: message %}
+
+<div class="layout layout--col gap--xsmall tfi-layout">
+  {% if error_text != blank %}
+    {% render "tfi_notice", kicker: "Needs attention", title: "Bus departures", body: error_text %}
+  {% elsif departures_list.size > 0 %}
+    {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, compact: true %}
+    {% for departure in departures_list limit: 3 %}
+      {% render "tfi_row", departure: departure, compact: true, tight: true %}
+    {% endfor %}
+  {% else %}
+    {% render "tfi_notice", kicker: "Nothing due", title: message_text, body: stops_label_text %}
+  {% endif %}
+</div>
+
+{% render "tfi_title_bar", instance_text: generated_at_text %}

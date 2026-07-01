@@ -1,0 +1,61 @@
+---
+name: TFI Bus Departures
+strategy: polling
+refresh_interval: 15
+framework_version: "3.1"
+polling_url: >-
+  https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?stop_1=##{{ stop_1 }}&stop_2=##{{ stop_2 }}&stop_3=##{{ stop_3 }}&stop_4=##{{ stop_4 }}&stop_5=##{{ stop_5 }}&limit=##{{ departure_count }}&time_zone=##{{ time_zone }}
+polling_headers: >-
+  x-nta-api-key=##{{ nta_api_key }}
+polling_verb: GET
+no_screen_padding: "no"
+dark_mode: "no"
+custom_fields:
+  - keyname: about
+    name: About This Plugin
+    field_type: author_bio
+    category: travel,life
+    description: Shows the next departures for selected Transport for Ireland stops using the NTA GTFS-Realtime feed.
+  - keyname: nta_api_key
+    field_type: password
+    name: NTA GTFS-R API Key
+    description: Your subscription key from developer.nationaltransport.ie.
+    placeholder: Paste your NTA subscription key
+  - keyname: stop_1
+    field_type: string
+    name: Stop 1
+    description: Search and copy a stop code at <a href="https://tfi-trmnl-bus.xanderjake.workers.dev/stops" class="underline" target="_blank">the stop finder</a>, then paste it here.
+    placeholder: "1278"
+  - keyname: stop_2
+    field_type: string
+    name: Stop 2
+    description: Optional. Paste another stop code or GTFS stop ID.
+    placeholder: "297"
+    optional: true
+  - keyname: stop_3
+    field_type: string
+    name: Stop 3
+    description: Optional. Paste another stop code or GTFS stop ID.
+    optional: true
+  - keyname: stop_4
+    field_type: string
+    name: Stop 4
+    description: Optional. Paste another stop code or GTFS stop ID.
+    optional: true
+  - keyname: stop_5
+    field_type: string
+    name: Stop 5
+    description: Optional. Paste another stop code or GTFS stop ID.
+    optional: true
+  - keyname: departure_count
+    field_type: number
+    name: Departures To Show
+    description: The screen is designed for five rows.
+    default: 5
+    min: 1
+    max: 5
+  - keyname: time_zone
+    field_type: time_zone
+    name: Time Zone
+    description: Used for display times.
+    default: Europe/Dublin

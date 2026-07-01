@@ -1,0 +1,17 @@
+{
+  "name": "tfi-trmnl-bus-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate:data": "python3 scripts/generate-worker-data.py --gtfs-zip /tmp/GTFS_Realtime.zip --out src/tfi-static.generated.js",
+    "generate:schedules": "python3 scripts/generate-worker-data.py --gtfs-zip /tmp/GTFS_Realtime.zip --out src/tfi-static.generated.js --kv-out-dir data/schedules",
+    "upload:schedules": "for file in data/schedules/tfi-stop-schedules-*.json; do wrangler kv bulk put \"$file\" --binding TFI_STOP_SCHEDULES --remote; done",
+    "test": "node scripts/worker-smoke-test.mjs",
+    "dev": "wrangler dev",
+    "check": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy --minify"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

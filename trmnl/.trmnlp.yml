@@ -1,0 +1,14 @@
+---
+watch:
+  - src
+  - .trmnlp.yml
+time_zone: Europe/Dublin
+custom_fields:
+  nta_api_key: "{{ env.NTA_API_KEY }}"
+  stop_1: "1278"
+  stop_2: ""
+  stop_3: ""
+  stop_4: ""
+  stop_5: ""
+  departure_count: "5"
+  time_zone: Europe/Dublin
