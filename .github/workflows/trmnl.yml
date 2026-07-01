@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  build:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,10 +18,10 @@ jobs:
         with:
           ruby-version: "3.4"
       - run: gem install trmnl_preview
-      - run: trmnlp lint
+      - run: trmnlp build
 
   push:
-    needs: lint
+    needs: build
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     defaults:
