@@ -1,0 +1,50 @@
+name: TRMNL
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trmnl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - run: gem install trmnl_preview
+      - run: trmnlp lint
+
+  push:
+    needs: lint
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trmnl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - run: gem install trmnl_preview
+      - name: Push plugin when configured
+        env:
+          TRMNL_API_KEY: ${{ secrets.TRMNL_API_KEY }}
+        run: |
+          if [ -z "$TRMNL_API_KEY" ]; then
+            echo "::notice::Set the TRMNL_API_KEY repository secret to enable TRMNL uploads."
+            exit 0
+          fi
+
+          if ! grep -qE '^id:' src/settings.yml; then
+            echo "::notice::Add the TRMNL plugin id to trmnl/src/settings.yml after the first manual push or clone. Skipping to avoid creating duplicate plugins."
+            exit 0
+          fi
+
+          trmnlp push --force
