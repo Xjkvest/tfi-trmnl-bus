@@ -1,7 +1,21 @@
 <style>
   .tfi-layout {
-    height: 100%;
-    gap: 10px;
+    width: 100%;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .tfi-layout--full {
+    gap: 12px;
+  }
+
+  .tfi-layout--half-horizontal,
+  .tfi-layout--half-vertical {
+    gap: 8px;
+  }
+
+  .tfi-layout--quadrant {
+    gap: 6px;
   }
 
   .tfi-min {
@@ -9,22 +23,23 @@
   }
 
   .tfi-topline {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 12px;
-    padding-bottom: 7px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 6px;
     border-bottom: 2px solid #000;
   }
 
   .tfi-topline--compact {
-    padding-bottom: 5px;
+    gap: 6px;
+    padding-bottom: 4px;
   }
 
   .tfi-kicker {
     display: block;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 1;
     text-transform: uppercase;
     letter-spacing: 0;
@@ -33,26 +48,34 @@
   .tfi-stop {
     display: block;
     margin-top: 3px;
+    font-size: 21px;
+    font-weight: 900;
+    line-height: 1.05;
+  }
+
+  .tfi-topline--compact .tfi-stop {
+    font-size: 15px;
   }
 
   .tfi-stamp {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
-    white-space: nowrap;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    max-width: 230px;
   }
 
   .tfi-chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 20px;
-    padding: 2px 6px;
+    min-height: 18px;
+    padding: 1px 5px;
     border: 1px solid #000;
     border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 800;
     line-height: 1;
     white-space: nowrap;
   }
@@ -64,20 +87,27 @@
 
   .tfi-hero {
     display: grid;
-    grid-template-columns: 70px minmax(0, 1fr) 76px;
-    gap: 12px;
-    align-items: center;
-    padding: 10px 12px;
+    grid-template-columns: 76px minmax(0, 1fr) 112px;
+    gap: 10px;
+    align-items: stretch;
+    min-height: 92px;
+    padding: 8px 10px;
     border: 2px solid #000;
     border-radius: 8px;
-    background:
-      repeating-linear-gradient(
-        90deg,
-        #fff 0,
-        #fff 10px,
-        #f0f0f0 10px,
-        #f0f0f0 12px
-      );
+    background: #fff;
+  }
+
+  .tfi-hero--compact {
+    grid-template-columns: 60px minmax(0, 1fr) 88px;
+    gap: 8px;
+    min-height: 72px;
+    padding: 8px;
+  }
+
+  .tfi-route-cell {
+    display: flex;
+    align-items: center;
+    min-width: 0;
   }
 
   .tfi-route {
@@ -85,37 +115,53 @@
     align-items: center;
     justify-content: center;
     min-width: 42px;
-    max-width: 70px;
+    max-width: 76px;
     min-height: 26px;
     padding: 2px 7px;
     border-radius: 4px;
     background: #000;
     color: #fff;
     font-size: 19px;
-    font-weight: 800;
+    font-weight: 900;
     line-height: 1;
     white-space: nowrap;
     overflow: hidden;
   }
 
   .tfi-route--hero {
-    min-width: 58px;
+    width: 100%;
+    max-width: none;
     min-height: 44px;
-    max-width: 70px;
     font-size: 30px;
   }
 
   .tfi-route--compact {
     min-width: 36px;
     min-height: 23px;
-    max-width: 56px;
-    font-size: 16px;
+    max-width: 58px;
     padding: 2px 5px;
+    font-size: 16px;
+  }
+
+  .tfi-route--mini {
+    min-width: 32px;
+    min-height: 21px;
+    max-width: 48px;
+    padding: 1px 4px;
+    font-size: 14px;
+  }
+
+  .tfi-hero-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
   }
 
   .tfi-destination {
     display: block;
-    font-weight: 800;
+    font-weight: 900;
     line-height: 1.05;
   }
 
@@ -123,21 +169,43 @@
     font-size: 24px;
   }
 
+  .tfi-destination--compact {
+    font-size: 18px;
+  }
+
+  .tfi-subline {
+    display: flex;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .tfi-subline .label {
+    min-width: 0;
+  }
+
   .tfi-due {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     align-items: flex-end;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
+    padding-left: 10px;
+    border-left: 2px solid #000;
     text-align: right;
   }
 
   .tfi-due-main {
     display: block;
-    font-size: 26px;
+    font-size: 36px;
     font-weight: 900;
-    line-height: 0.95;
+    line-height: 0.92;
     white-space: nowrap;
+  }
+
+  .tfi-due-main--compact {
+    font-size: 25px;
   }
 
   .tfi-board {
@@ -145,45 +213,107 @@
     flex: 1;
     min-height: 0;
     flex-direction: column;
-    border-top: 2px solid #000;
+    overflow: hidden;
+    border: 2px solid #000;
+    border-radius: 8px;
   }
 
   .tfi-board-head,
   .tfi-row {
     display: grid;
-    grid-template-columns: 58px minmax(0, 1fr) 64px;
-    gap: 10px;
+    grid-template-columns: 68px minmax(0, 1fr) 82px;
+    gap: 8px;
     align-items: center;
   }
 
   .tfi-board-head {
-    padding: 5px 0 4px;
+    min-height: 22px;
+    padding: 0 10px;
     border-bottom: 1px solid #000;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        #fff 0,
+        #fff 5px,
+        #eee 5px,
+        #eee 6px
+      );
   }
 
   .tfi-row {
-    min-height: 43px;
-    padding: 7px 0;
+    flex: 1;
+    min-height: 42px;
+    padding: 5px 10px;
     border-bottom: 1px solid #000;
   }
 
-  .tfi-row--compact {
-    grid-template-columns: 48px minmax(0, 1fr) 48px;
-    gap: 7px;
-    min-height: 35px;
-    padding: 5px 0;
+  .tfi-row:last-child {
+    border-bottom: 0;
   }
 
-  .tfi-row-meta {
+  .tfi-row--compact {
+    grid-template-columns: 54px minmax(0, 1fr) 64px;
+    gap: 7px;
+    min-height: 34px;
+    padding: 4px 8px;
+  }
+
+  .tfi-row--tight {
+    min-height: 30px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+
+  .tfi-row-main {
     display: flex;
+    min-width: 0;
     flex-direction: column;
     gap: 2px;
+  }
+
+  .tfi-row-destination {
+    display: block;
     min-width: 0;
+    line-height: 1.05;
+  }
+
+  .tfi-row-subline {
+    display: flex;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .tfi-row-time {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2px;
     text-align: right;
     white-space: nowrap;
+  }
+
+  .tfi-time-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 54px;
+    min-height: 23px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #000;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .tfi-row--compact .tfi-time-pill {
+    min-width: 44px;
+    min-height: 20px;
+    padding: 1px 4px;
+    font-size: 13px;
   }
 
   .tfi-right {
@@ -191,13 +321,14 @@
   }
 
   .tfi-titlebar-mark {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 18px;
     border: 2px solid #000;
     border-radius: 4px;
     background:
-      linear-gradient(#000, #000) center / 10px 2px no-repeat,
-      linear-gradient(#000, #000) center / 2px 10px no-repeat;
+      radial-gradient(circle at 6px 15px, #000 0, #000 2px, transparent 3px),
+      radial-gradient(circle at 16px 15px, #000 0, #000 2px, transparent 3px),
+      linear-gradient(#000, #000) 4px 5px / 14px 2px no-repeat;
   }
 
   .tfi-notice {
@@ -226,15 +357,18 @@
 
 {% template tfi_header %}
   <div class="tfi-topline{% if compact %} tfi-topline--compact{% endif %}">
-    <div>
-      <span class="tfi-kicker">Next departures</span>
+    <div class="tfi-min">
+      <span class="tfi-kicker">TFI live departures</span>
       <span class="title{% if compact %} title--small{% else %} title--medium{% endif %} tfi-stop" data-clamp="1">
         {{ stops_label_text | default: "Selected stops" }}
       </span>
     </div>
     <div class="tfi-stamp">
-      <span class="tfi-chip tfi-chip--dark">{{ generated_at_text | default: "--:--" }}</span>
-      {% if count_text != blank %}
+      {% if source_time_text != blank %}
+        <span class="tfi-chip tfi-chip--dark">Feed {{ source_time_text }}</span>
+      {% endif %}
+      <span class="tfi-chip">Updated {{ generated_at_text | default: "--:--" }}</span>
+      {% if count_text != blank and compact != true %}
         <span class="label label--small">{{ count_text }}</span>
       {% endif %}
     </div>
@@ -242,41 +376,52 @@
 {% endtemplate %}
 
 {% template tfi_hero %}
-  <div class="tfi-hero">
-    <div>
-      <span class="tfi-route tfi-route--hero">{{ departure.route }}</span>
+  <div class="tfi-hero{% if compact %} tfi-hero--compact{% endif %}">
+    <div class="tfi-route-cell">
+      <span class="tfi-route tfi-route--hero{% if compact %} tfi-route--compact{% endif %}" data-value-fit="true">{{ departure.route }}</span>
     </div>
-    <div class="tfi-min">
-      <span class="tfi-destination tfi-destination--hero" data-clamp="1">{{ departure.destination }}</span>
-      <div class="flex gap--small">
-        <span class="label label--small label--underline" data-clamp="1">
-          {{ departure.stop }}{% if departure.stop_code != blank %} #{{ departure.stop_code }}{% endif %}
-        </span>
+    <div class="tfi-hero-main">
+      <span class="tfi-destination {% if compact %}tfi-destination--compact{% else %}tfi-destination--hero{% endif %}" data-clamp="{% if compact %}1{% else %}2{% endif %}">
+        {{ departure.destination }}
+      </span>
+      <div class="tfi-subline">
+        {% if show_stop %}
+          <span class="label label--small label--underline" data-clamp="1">
+            {{ departure.stop }}{% if departure.stop_code != blank %} #{{ departure.stop_code }}{% endif %}
+          </span>
+        {% endif %}
         <span class="label label--small label--underline">{{ departure.status }}</span>
       </div>
     </div>
     <div class="tfi-due">
-      <span class="tfi-due-main">{{ departure.due }}</span>
+      <span class="value value--large tfi-due-main{% if compact %} tfi-due-main--compact{% endif %}" data-value-fit="true">{{ departure.due }}</span>
       <span class="label label--small">at {{ departure.time }}</span>
     </div>
   </div>
 {% endtemplate %}
 
 {% template tfi_row %}
-  <div class="tfi-row{% if compact %} tfi-row--compact{% endif %}">
-    <div>
-      <span class="tfi-route{% if compact %} tfi-route--compact{% endif %}">{{ departure.route }}</span>
+  <div class="tfi-row{% if compact %} tfi-row--compact{% endif %}{% if tight %} tfi-row--tight{% endif %}">
+    <div class="tfi-route-cell">
+      <span class="tfi-route{% if compact %} tfi-route--compact{% endif %}{% if mini %} tfi-route--mini{% endif %}" data-value-fit="true">{{ departure.route }}</span>
     </div>
-    <div class="tfi-row-meta">
-      <span class="title title--small" data-clamp="1">{{ departure.destination }}</span>
+    <div class="tfi-row-main">
+      <span class="title title--small tfi-row-destination" data-clamp="1">{{ departure.destination }}</span>
       {% unless tight %}
-        <span class="label label--small label--underline" data-clamp="1">
-          {{ departure.stop }}{% if departure.stop_code != blank %} #{{ departure.stop_code }}{% endif %} - {{ departure.status }}
-        </span>
+        <div class="tfi-row-subline">
+          {% if show_stop %}
+            <span class="label label--small label--underline" data-clamp="1">
+              {{ departure.stop }}{% if departure.stop_code != blank %} #{{ departure.stop_code }}{% endif %}
+            </span>
+          {% endif %}
+          <span class="label label--small label--underline">{{ departure.status }}</span>
+        </div>
+      {% elsif show_stop %}
+        <span class="label label--small" data-clamp="1">{{ departure.stop }}</span>
       {% endunless %}
     </div>
     <div class="tfi-row-time">
-      <span class="title title--small">{{ departure.due }}</span>
+      <span class="tfi-time-pill" data-value-fit="true">{{ departure.due }}</span>
       <span class="label label--small">{{ departure.time }}</span>
     </div>
   </div>
@@ -285,7 +430,7 @@
 {% template tfi_table_head %}
   <div class="tfi-board-head">
     <span class="label label--small">Route</span>
-    <span class="label label--small">Destination</span>
+    <span class="label label--small">{% if show_stop %}Destination / stop{% else %}Destination{% endif %}</span>
     <span class="label label--small tfi-right">Due</span>
   </div>
 {% endtemplate %}
@@ -293,9 +438,9 @@
 {% template tfi_notice %}
   <div class="tfi-notice">
     <span class="tfi-kicker">{{ kicker | default: "TFI Bus" }}</span>
-    <span class="title title--medium">{{ title }}</span>
+    <span class="title title--medium" data-clamp="2">{{ title }}</span>
     {% if body != blank %}
-      <span class="description">{{ body }}</span>
+      <span class="description" data-clamp="3">{{ body }}</span>
     {% endif %}
   </div>
 {% endtemplate %}

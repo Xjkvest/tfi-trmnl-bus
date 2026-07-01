@@ -2,7 +2,7 @@
 name: TFI Bus Departures
 strategy: polling
 refresh_interval: 15
-framework_version: "3.1"
+framework_version: "3.1.1"
 polling_url: >-
   https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?stop_1=##{{ stop_1 }}&stop_2=##{{ stop_2 }}&stop_3=##{{ stop_3 }}&stop_4=##{{ stop_4 }}&stop_5=##{{ stop_5 }}&limit=##{{ departure_count }}&time_zone=##{{ time_zone }}
 polling_headers: >-

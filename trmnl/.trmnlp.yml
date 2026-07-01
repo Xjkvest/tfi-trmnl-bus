@@ -12,3 +12,8 @@ custom_fields:
   stop_5: ""
   departure_count: "5"
   time_zone: Europe/Dublin
+variables:
+  trmnl:
+    plugin_settings:
+      polling_url: >-
+        https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?stop_1={{ stop_1 }}&stop_2={{ stop_2 }}&stop_3={{ stop_3 }}&stop_4={{ stop_4 }}&stop_5={{ stop_5 }}&limit={{ departure_count }}&time_zone={{ time_zone }}

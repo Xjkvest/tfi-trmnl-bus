@@ -1,7 +1,7 @@
 import { ROUTES, STOPS } from "./tfi-static.generated.js";
 
 const DEFAULT_LIMIT = 5;
-const MAX_LIMIT = 10;
+const MAX_LIMIT = 5;
 const DEFAULT_TIME_ZONE = "Europe/Dublin";
 const TRIP_UPDATES_URL = "https://api.nationaltransport.ie/gtfsr/v2/TripUpdates?format=json";
 
@@ -342,7 +342,41 @@ function extractDepartures(feed, stopIds, limit, timeZone, nowMs, schedules = ne
   }
 
   rows.sort((a, b) => a.epoch - b.epoch || String(a.route).localeCompare(String(b.route)));
-  return rows.slice(0, limit);
+  return balancedDepartures(rows, stopIds, limit);
+}
+
+function balancedDepartures(rows, stopIds, limit) {
+  const selectedRows = [];
+  const selectedKeys = new Set();
+
+  for (const stopId of stopIds) {
+    const firstForStop = rows.find((row) => row.stop_id === stopId);
+    if (!firstForStop) continue;
+
+    const key = departureKey(firstForStop);
+    if (!selectedKeys.has(key)) {
+      selectedRows.push(firstForStop);
+      selectedKeys.add(key);
+    }
+
+    if (selectedRows.length >= limit) break;
+  }
+
+  for (const row of rows) {
+    if (selectedRows.length >= limit) break;
+
+    const key = departureKey(row);
+    if (!selectedKeys.has(key)) {
+      selectedRows.push(row);
+      selectedKeys.add(key);
+    }
+  }
+
+  return selectedRows.sort((a, b) => a.epoch - b.epoch || String(a.route).localeCompare(String(b.route)));
+}
+
+function departureKey(row) {
+  return `${row.stop_id}:${row.route}:${row.epoch}:${row.destination}`;
 }
 
 async function loadStopSchedules(env, stopIds) {
@@ -597,6 +631,7 @@ function numberOrNull(value) {
 function dueLabel(deltaMs) {
   const minutes = Math.ceil(deltaMs / 60_000);
   if (minutes <= 0) return { minutes: 0, label: "Due" };
+  if (minutes > 99) return { minutes, label: "99+ min" };
   return { minutes, label: `${minutes} min` };
 }
 

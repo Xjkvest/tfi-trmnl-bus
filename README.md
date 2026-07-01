@@ -62,7 +62,7 @@ Current deployment:
 ```text
 Worker: tfi-trmnl-bus
 URL: https://tfi-trmnl-bus.xanderjake.workers.dev
-Version ID: 99adefdc-627f-4746-ba4c-64071d1268ae
+Version ID: 7954ec38-b16c-43d2-b42c-4ed1309dca21
 ```
 
 ## TRMNL Setup
