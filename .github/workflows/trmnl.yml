@@ -17,7 +17,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
-      - run: gem install trmnl_preview
+      - run: gem install trmnl_preview -v 0.8.10
       - run: trmnlp lint
       - run: trmnlp build
 
@@ -33,7 +33,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
-      - run: gem install trmnl_preview
+      - run: gem install trmnl_preview -v 0.8.10
       - name: Push plugin when configured
         env:
           TRMNL_API_KEY: ${{ secrets.TRMNL_API_KEY }}
