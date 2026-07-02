@@ -34,13 +34,6 @@
   name: Stop 5
   description: Optional. Paste another stop code or GTFS stop ID.
   optional: true
-- keyname: departure_count
-  field_type: number
-  name: Departures To Show
-  description: Full-screen layouts can show up to eight rows; smaller layouts automatically show fewer.
-  default: 8
-  min: 1
-  max: 10
 - keyname: time_zone
   field_type: time_zone
   name: Time Zone

@@ -6,7 +6,7 @@
   }
 
   .tfi-layout--full {
-    gap: 12px;
+    gap: 8px;
   }
 
   .tfi-layout--half-horizontal,
@@ -27,7 +27,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 10px;
-    p\061 dding-bottom: 6px;
+    p\061 dding-bottom: 5px;
     border-bottom: 2px solid #000;
   }
 
@@ -47,7 +47,7 @@
 
   .tfi-stop {
     display: block;
-    m\061 rgin-top: 3px;
+    m\061 rgin-top: 2px;
     font\02d size: 21px;
     font-weight: 900;
     line-height: 1.05;
@@ -230,20 +230,13 @@
     min-height: 22px;
     p\061 dding: 0 10px;
     border-bottom: 1px solid #000;
-    background:
-      repeating-linear-gradient(
-        90deg,
-        #fff 0,
-        #fff 5px,
-        #eee 5px,
-        #eee 6px
-      );
+    background: #f2f2f2;
   }
 
   .tfi-row {
     flex: 1;
-    min-height: 42px;
-    p\061 dding: 5px 10px;
+    min-height: 48px;
+    p\061 dding: 5px 10px 4px;
     border-bottom: 1px solid #000;
   }
 
@@ -252,14 +245,14 @@
   }
 
   .tfi-row--compact {
-    grid-template-columns: 54px minmax(0, 1fr) 64px;
+    grid-template-columns: 50px minmax(0, 1fr) 64px;
     gap: 7px;
-    min-height: 34px;
+    min-height: 42px;
     p\061 dding: 4px 8px;
   }
 
   .tfi-row--tight {
-    min-height: 30px;
+    min-height: 34px;
     p\061 dding-top: 3px;
     p\061 dding-bottom: 3px;
   }
@@ -277,15 +270,18 @@
     line-height: 1.05;
   }
 
-  .tfi-row-subline {
-    display: flex;
+  .tfi-row-meta {
+    display: block;
     min-width: 0;
-    flex-wrap: wrap;
-    gap: 6px;
+    color: #222;
+    line-height: 1.05;
   }
 
   .tfi-row-headsign {
-    max-width: 58%;
+    display: block;
+    min-width: 0;
+    color: #222;
+    line-height: 1.05;
   }
 
   .tfi-row-time {
@@ -302,7 +298,7 @@
     display: inline-flex;
     align-items: center;
     justify\02d content: center;
-    min-width: 54px;
+    min-width: 56px;
     min-height: 23px;
     p\061 dding: 2px 6px;
     border\02d radius: 4px;
@@ -314,7 +310,7 @@
   }
 
   .tfi-row--compact .tfi-time-pill {
-    min-width: 44px;
+    min-width: 48px;
     min-height: 20px;
     p\061 dding: 1px 4px;
     font\02d size: 13px;
@@ -361,7 +357,7 @@
   @media (max-width: 560px) {
     .tfi-board-head,
     .tfi-row {
-      grid-template-columns: 54px minmax(0, 1fr) 68px;
+      grid-template-columns: 50px minmax(0, 1fr) 66px;
       gap: 6px;
     }
 
@@ -370,8 +366,9 @@
       p\061 dding-right: 8px;
     }
 
-    .tfi-row-headsign {
-      max-width: 100%;
+    .tfi-route {
+      min-width: 36px;
+      max-width: 50px;
     }
   }
 </style>
@@ -404,14 +401,14 @@
       </span>
       <div class="tfi-subline">
         {% if departure.destination != blank %}
-          <span class="label label--small label--underline" data-clamp="1">{{ departure.destination }}</span>
+          <span class="label label--small" data-clamp="1">{{ departure.destination }}</span>
         {% endif %}
         {% if departure.stop_code != blank %}
-          <span class="label label--small label--underline" data-clamp="1">
+          <span class="label label--small" data-clamp="1">
             Stop code: #{{ departure.stop_code }}
           </span>
         {% endif %}
-        <span class="label label--small label--underline">{{ departure.status }}</span>
+        <span class="label label--small">{{ departure.status }}</span>
       </div>
     </div>
     <div class="tfi-due">
@@ -428,15 +425,12 @@
     </div>
     <div class="tfi-row-main">
       <span class="title title--small tfi-row-destination" data-clamp="1">{{ departure.stop }}</span>
-      <div class="tfi-row-subline">
-        {% if departure.destination != blank %}
-          <span class="label label--small label--underline tfi-row-headsign" data-clamp="1">{{ departure.destination }}</span>
-        {% endif %}
-        {% if departure.stop_code != blank %}
-          <span class="label label--small label--underline" data-clamp="1">Stop code: #{{ departure.stop_code }}</span>
-        {% endif %}
-        <span class="label label--small label--underline">{{ departure.status }}</span>
-      </div>
+      {% if departure.destination != blank %}
+        <span class="label label--small tfi-row-headsign" data-clamp="1">{{ departure.destination }}</span>
+      {% endif %}
+      <span class="label label--small tfi-row-meta" data-clamp="1">
+        {% if departure.stop_code != blank %}Stop code: #{{ departure.stop_code }}{% endif %}{% if departure.stop_code != blank and departure.status != blank %} / {% endif %}{{ departure.status }}
+      </span>
     </div>
     <div class="tfi-row-time">
       <span class="tfi-time-pill" data-value-fit="true">{{ departure.time }}</span>
@@ -448,7 +442,7 @@
 {% template tfi_table_head %}
   <div class="tfi-board-head">
     <span class="label label--small">Route</span>
-    <span class="label label--small">Stop / destination</span>
+    <span class="label label--small">Stop</span>
     <span class="label label--small tfi-right">Time</span>
   </div>
 {% endtemplate %}

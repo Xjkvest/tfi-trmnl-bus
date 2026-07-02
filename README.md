@@ -20,7 +20,7 @@ Then check:
 
 ```sh
 curl 'http://127.0.0.1:8787/api/stops/search?query=college%20green'
-curl 'http://127.0.0.1:8787/api/departures?stop_1=1278&limit=8' \
+curl 'http://127.0.0.1:8787/api/departures?stop_1=1278&limit=10' \
   -H 'x-nta-api-key: YOUR_NTA_KEY'
 ```
 
@@ -131,7 +131,7 @@ Manual setup still works:
 3. Set Polling URL to:
 
 ```text
-https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?subscription-key={{ nta_api_key | url_encode }}&stop_1={{ stop_1 }}&stop_2={{ stop_2 }}&stop_3={{ stop_3 }}&stop_4={{ stop_4 }}&stop_5={{ stop_5 }}&limit={{ departure_count }}&time_zone={{ time_zone }}
+https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?subscription-key={{ nta_api_key | url_encode }}&stop_1={{ stop_1 }}&stop_2={{ stop_2 }}&stop_3={{ stop_3 }}&stop_4={{ stop_4 }}&stop_5={{ stop_5 }}&limit=10&time_zone={{ time_zone }}
 ```
 
 4. Set Polling Headers to:
@@ -157,7 +157,7 @@ TRMNL markup fields need the literal Liquid/HTML/CSS contents. Do not paste a Gi
 
 The Stop fields intentionally use plain text now. TRMNL's `xhrSelectSearch` field is documented to send search text as `query`, but in practice the private-plugin settings dropdown can behave like a tiny static list. Plain text fields plus the Worker-hosted stop finder avoid that UI limit while keeping the plugin polling URL the same.
 
-The board is stop-first: each row shows the route, stop name, optional destination/headsign, stop code, status, departure time, and due label. Full-screen layouts show up to eight rows, half-vertical shows up to six, half-horizontal shows up to four, and quadrant shows two.
+The board is stop-first: each row shows the route, stop name, optional destination/headsign, stop code, status, departure time, and due label. The plugin fetches up to ten departures automatically; full-screen layouts show up to six rows, half-vertical shows up to five, half-horizontal shows three, and quadrant shows two.
 
 Paste only the NTA subscription key into the plugin field. The Worker also tolerates common copied formats such as `subscription-key=KEY`, `x-api-key: KEY`, quoted keys, or TRMNL debug values displayed with a leading `##`, but the plain key is best. This plugin uses the polling URL for the key because some private-plugin instances leave header placeholders unsubstituted.
 

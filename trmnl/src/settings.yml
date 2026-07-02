@@ -5,7 +5,7 @@ strategy: polling
 refresh_interval: 15
 framework_version: "3.1.1"
 polling_url: >-
-  https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?subscription-key={{ nta_api_key | url_encode }}&stop_1={{ stop_1 }}&stop_2={{ stop_2 }}&stop_3={{ stop_3 }}&stop_4={{ stop_4 }}&stop_5={{ stop_5 }}&limit={{ departure_count }}&time_zone={{ time_zone }}
+  https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?subscription-key={{ nta_api_key | url_encode }}&stop_1={{ stop_1 }}&stop_2={{ stop_2 }}&stop_3={{ stop_3 }}&stop_4={{ stop_4 }}&stop_5={{ stop_5 }}&limit=10&time_zone={{ time_zone }}
 polling_headers: ""
 polling_verb: GET
 no_screen_padding: "no"
@@ -47,13 +47,6 @@ custom_fields:
     name: Stop 5
     description: Optional. Paste another stop code or GTFS stop ID.
     optional: true
-  - keyname: departure_count
-    field_type: number
-    name: Departures To Show
-    description: Full-screen layouts can show up to eight rows; smaller layouts automatically show fewer.
-    default: 8
-    min: 1
-    max: 10
   - keyname: time_zone
     field_type: time_zone
     name: Time Zone
