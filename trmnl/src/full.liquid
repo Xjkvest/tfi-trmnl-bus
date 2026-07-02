@@ -8,8 +8,8 @@
 {% assign departures_list = payload.departures | default: departures %}
 {% assign source_time_text = payload.source_time | default: source_time %}
 {% assign visible_count = departures_list.size %}
-{% if visible_count > 6 %}
-  {% assign visible_count = 6 %}
+{% if visible_count > 15 %}
+  {% assign visible_count = 15 %}
 {% endif %}
 {% assign count_text = visible_count | append: " rows" %}
 
@@ -22,7 +22,7 @@
 
       <div class="tfi-board">
         {% render "tfi_table_head" %}
-        {% for departure in departures_list limit: 6 %}
+        {% for departure in departures_list limit: 15 %}
           {% render "tfi_row", departure: departure %}
         {% endfor %}
       </div>

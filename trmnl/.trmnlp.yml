@@ -15,5 +15,5 @@ variables:
   trmnl:
     plugin_settings:
       polling_url: >-
-        https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?subscription-key={{ nta_api_key | url_encode }}&stop_1={{ stop_1 }}&stop_2={{ stop_2 }}&stop_3={{ stop_3 }}&stop_4={{ stop_4 }}&stop_5={{ stop_5 }}&limit=10&time_zone={{ time_zone }}
+        https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?subscription-key={{ nta_api_key | url_encode }}&stop_1={{ stop_1 }}&stop_2={{ stop_2 }}&stop_3={{ stop_3 }}&stop_4={{ stop_4 }}&stop_5={{ stop_5 }}&limit=15&time_zone={{ time_zone }}
       polling_headers: ""

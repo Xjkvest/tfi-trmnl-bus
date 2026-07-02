@@ -354,6 +354,21 @@
     color: #555;
   }
 
+  .tfi-layout--full .tfi-row:nth-of-type(n+16),
+  .tfi-layout--half-vertical .tfi-row:nth-of-type(n+16) {
+    display: none;
+  }
+
+  @media (max-height: 560px) {
+    .tfi-layout--full .tfi-row:nth-of-type(n+9) {
+      display: none;
+    }
+
+    .tfi-layout--half-vertical .tfi-row:nth-of-type(n+10) {
+      display: none;
+    }
+  }
+
   @media (max-width: 560px) {
     .tfi-board-head,
     .tfi-row {

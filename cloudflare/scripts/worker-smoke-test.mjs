@@ -138,10 +138,17 @@ try {
     TFI_STOP_SCHEDULES: {
       async get(key) {
         assert.equal(key, `schedule:${stop.id}`);
-        return JSON.stringify([
-          ["STATIC_TRIP_1", "5", 12 * 3600 + 5 * 60, "City Centre", "15", "City Centre", "TEST_SERVICE"],
-          ["STATIC_TRIP_2", "5", 12 * 3600 + 35 * 60, "City Centre", "15", "City Centre", "TEST_SERVICE"],
-        ]);
+        return JSON.stringify(
+          Array.from({ length: 16 }, (_, index) => [
+            `STATIC_TRIP_${index + 1}`,
+            "5",
+            12 * 3600 + (index + 1) * 5 * 60,
+            "City Centre",
+            "15",
+            "City Centre",
+            "TEST_SERVICE",
+          ]),
+        );
       },
     },
   };
@@ -155,16 +162,24 @@ try {
   assert.equal(scheduledFillResponse.status, 200);
   const scheduledFillPayload = await scheduledFillResponse.json();
   assert.equal(scheduledFillPayload.error, "");
+  assert.equal(scheduledFillPayload.departures.length, 5);
   assert.deepEqual(
     scheduledFillPayload.departures.map((departure) => departure.realtime_source),
-    ["static_schedule", "static_schedule"],
+    ["static_schedule", "static_schedule", "static_schedule", "static_schedule", "static_schedule"],
   );
-  assert.deepEqual(
-    scheduledFillPayload.departures.map((departure) => departure.route),
-    ["15", "15"],
-  );
+  assert.ok(scheduledFillPayload.departures.every((departure) => departure.route === "15"));
   assert.equal(scheduledFillPayload.departures[0].status, "Scheduled");
-  assert.equal(scheduledFillPayload.debug.static_schedule_rows, 2);
+  assert.equal(scheduledFillPayload.debug.static_schedule_rows, 15);
+
+  const maxLimitResponse = await worker.fetch(
+    new Request(`https://worker.example/api/departures?stop_1=1278&limit=99`, {
+      headers: { "x-nta-api-key": "test-key" },
+    }),
+    scheduledFillEnv,
+  );
+  assert.equal(maxLimitResponse.status, 200);
+  const maxLimitPayload = await maxLimitResponse.json();
+  assert.equal(maxLimitPayload.departures.length, 15);
 
   const trmnlUserKeyResponse = await worker.fetch(
     new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=user_wrong_key`),
