@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Generate compact static GTFS data for the Cloudflare Worker."""
-
 from __future__ import annotations
 
 import argparse
@@ -183,7 +181,6 @@ def main() -> int:
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
-        "// Generated from the official TFI static GTFS ZIP. Do not edit by hand.\n"
         f"export const STOPS = {json.dumps(stops, ensure_ascii=False, separators=(',', ':'))};\n"
         f"export const ROUTES = {json.dumps(routes, ensure_ascii=False, separators=(',', ':'))};\n"
         f"export const SERVICE_CALENDARS = {json.dumps(service_calendars, ensure_ascii=False, separators=(',', ':'))};\n",

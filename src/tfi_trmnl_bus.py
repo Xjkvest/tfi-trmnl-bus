@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Tiny TRMNL polling service for Irish GTFS-Realtime bus departures."""
-
 from __future__ import annotations
 
 import argparse
@@ -24,8 +22,8 @@ from typing import Any, Iterable
 
 try:
     from zoneinfo import ZoneInfo
-except ImportError:  # pragma: no cover - Python 3.8+
-    ZoneInfo = None  # type: ignore
+except ImportError:
+    ZoneInfo = None
 
 
 DEFAULT_GTFS_URL = "https://www.transportforireland.ie/transitData/Data/GTFS_Realtime.zip"
@@ -556,7 +554,7 @@ class BusPluginHandler(BaseHTTPRequestHandler):
     store: GTFSStaticStore
     trip_updates_url: str
 
-    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+    def log_message(self, format: str, *args: Any) -> None:
         print(f"{self.address_string()} - {format % args}", file=sys.stderr)
 
     def do_OPTIONS(self) -> None:

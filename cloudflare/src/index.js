@@ -740,9 +740,7 @@ function normalizeStopIds(values) {
           }
           continue;
         }
-      } catch {
-        // Fall through to comma parsing.
-      }
+      } catch {}
     }
 
     for (const part of text.split(",")) {
