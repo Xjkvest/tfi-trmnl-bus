@@ -13,11 +13,12 @@ jobs:
       run:
         working-directory: trmnl
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
       - run: gem install trmnl_preview
+      - run: trmnlp lint
       - run: trmnlp build
 
   push:
@@ -28,7 +29,7 @@ jobs:
       run:
         working-directory: trmnl
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
