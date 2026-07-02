@@ -1,4 +1,5 @@
 ---
+id: 9e109eeb-7446-4b04-b6c8-c4615887929b
 name: TFI Bus Departures
 strategy: polling
 refresh_interval: 15
