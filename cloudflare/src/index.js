@@ -1,4 +1,4 @@
-import { ROUTES, STOPS } from "./tfi-static.generated.js";
+import { ROUTES, SERVICE_CALENDARS, STOPS } from "./tfi-static.generated.js";
 
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 10;
@@ -248,6 +248,7 @@ async function departuresPayload(request, params, env = {}) {
 
   const feed = await response.json();
   const schedules = await schedulesPromise;
+  const serviceCalendars = configuredServiceCalendars(env);
   const timestamp = Number(feed?.header?.timestamp);
   if (Number.isFinite(timestamp) && timestamp > 0) {
     payload.source_time = formatTime(new Date(timestamp * 1000), timeZone);
@@ -258,9 +259,12 @@ async function departuresPayload(request, params, env = {}) {
     absolute_time_rows: 0,
     schedule_fallback_rows: 0,
     missing_schedule_rows: 0,
+    realtime_rows: 0,
+    static_schedule_candidates: 0,
+    static_schedule_rows: 0,
     schedule_stops_loaded: schedules.size,
   };
-  payload.departures = extractDepartures(feed, stopIds, limit, timeZone, now, schedules, debugStats);
+  payload.departures = extractDepartures(feed, stopIds, limit, timeZone, now, schedules, serviceCalendars, debugStats);
   if (debug) {
     payload.debug = debugStats;
   }
@@ -270,7 +274,7 @@ async function departuresPayload(request, params, env = {}) {
   return payload;
 }
 
-function extractDepartures(feed, stopIds, limit, timeZone, nowMs, schedules = new Map(), debugStats = {}) {
+function extractDepartures(feed, stopIds, limit, timeZone, nowMs, schedules = new Map(), serviceCalendars = SERVICE_CALENDARS, debugStats = {}) {
   const selected = new Set(stopIds);
   const rows = [];
 
@@ -333,6 +337,7 @@ function extractDepartures(feed, stopIds, limit, timeZone, nowMs, schedules = ne
         update.stopHeadsign ||
         trip.headsign ||
         scheduleMatch?.headsign ||
+        scheduleMatch?.tripHeadsign ||
         "";
 
       rows.push({
@@ -340,7 +345,7 @@ function extractDepartures(feed, stopIds, limit, timeZone, nowMs, schedules = ne
         time: formatTime(eventDate, timeZone),
         due: due.label,
         due_minutes: due.minutes,
-        route: ROUTES[routeId] || routeId || "Bus",
+        route: ROUTES[routeId] || scheduleMatch?.route || routeId || "Bus",
         destination,
         trip_id: tripId,
         stop: stop?.name || stopId,
@@ -354,7 +359,14 @@ function extractDepartures(feed, stopIds, limit, timeZone, nowMs, schedules = ne
   }
 
   rows.sort((a, b) => a.epoch - b.epoch || String(a.route).localeCompare(String(b.route)));
-  return balancedDepartures(rows, stopIds, limit);
+  debugStats.realtime_rows = rows.length;
+
+  const existingKeys = new Set(rows.map(departureKey));
+  const scheduleFill = staticScheduleDepartures(stopIds, limit, timeZone, nowMs, schedules, serviceCalendars, existingKeys);
+  debugStats.static_schedule_candidates = scheduleFill.candidates;
+  debugStats.static_schedule_rows = scheduleFill.rows.length;
+
+  return balancedDepartures([...rows, ...scheduleFill.rows], stopIds, limit);
 }
 
 function balancedDepartures(rows, stopIds, limit) {
@@ -388,7 +400,67 @@ function balancedDepartures(rows, stopIds, limit) {
 }
 
 function departureKey(row) {
+  if (row.trip_id) {
+    return `${row.stop_id}:trip:${row.trip_id}`;
+  }
   return `${row.stop_id}:${row.route}:${row.epoch}:${row.destination}`;
+}
+
+function staticScheduleDepartures(stopIds, limit, timeZone, nowMs, schedules, serviceCalendars, existingKeys) {
+  const rows = [];
+  let candidates = 0;
+  const today = ymdInTimeZone(new Date(nowMs), timeZone);
+  const serviceDates = [addYmdDays(today, -1), today, addYmdDays(today, 1)];
+  const horizonMs = nowMs + 18 * 60 * 60 * 1000;
+
+  for (const stopId of stopIds) {
+    const schedule = schedules.get(stopId);
+    if (!schedule) continue;
+
+    for (const record of schedule.records) {
+      if (!record.route || !record.serviceId) {
+        continue;
+      }
+
+      for (const serviceDate of serviceDates) {
+        if (!serviceActiveOnDate(record.serviceId, serviceDate, serviceCalendars)) continue;
+
+        const epoch = epochFromLocalYmdSeconds(serviceDate, record.seconds, 0, timeZone);
+        if (epoch === null) continue;
+
+        const eventMs = epoch * 1000;
+        if (eventMs < nowMs - 60_000 || eventMs > horizonMs) continue;
+
+        const stop = STOP_BY_ID.get(stopId);
+        const due = dueLabel(eventMs - nowMs);
+        const destination = record.headsign || record.tripHeadsign || "";
+        const row = {
+          epoch,
+          time: formatTime(new Date(eventMs), timeZone),
+          due: due.label,
+          due_minutes: due.minutes,
+          route: record.route,
+          destination,
+          trip_id: record.tripId,
+          stop: stop?.name || stopId,
+          stop_code: stop?.code || "",
+          stop_id: stopId,
+          status: "Scheduled",
+          delay_seconds: 0,
+          realtime_source: "static_schedule",
+        };
+        const key = departureKey(row);
+        candidates += 1;
+        if (existingKeys.has(key)) continue;
+
+        existingKeys.add(key);
+        rows.push(row);
+      }
+    }
+  }
+
+  rows.sort((a, b) => a.epoch - b.epoch || String(a.route).localeCompare(String(b.route)));
+  return { candidates, rows: rows.slice(0, Math.max(limit * 3, limit)) };
 }
 
 async function loadStopSchedules(env, stopIds) {
@@ -406,7 +478,7 @@ async function loadStopSchedules(env, stopIds) {
 
         const rows = JSON.parse(text);
         const schedule = buildStopScheduleIndex(rows);
-        if (schedule.byTrip.size > 0) {
+        if (schedule.records.length > 0) {
           schedules.set(stopId, schedule);
         }
       } catch (error) {
@@ -421,15 +493,20 @@ async function loadStopSchedules(env, stopIds) {
 function buildStopScheduleIndex(rows) {
   const byTrip = new Map();
   const byTripAndSequence = new Map();
+  const records = [];
 
   for (const row of Array.isArray(rows) ? rows : []) {
     const tripId = String(row?.[0] || "");
     const stopSequence = String(row?.[1] || "");
     const seconds = numberOrNull(row?.[2]);
     const headsign = String(row?.[3] || "");
+    const route = String(row?.[4] || "");
+    const tripHeadsign = String(row?.[5] || "");
+    const serviceId = String(row?.[6] || "");
     if (!tripId || seconds === null) continue;
 
-    const record = { tripId, stopSequence, seconds, headsign };
+    const record = { tripId, stopSequence, seconds, headsign, route, tripHeadsign, serviceId };
+    records.push(record);
     if (!byTrip.has(tripId)) {
       byTrip.set(tripId, []);
     }
@@ -440,7 +517,7 @@ function buildStopScheduleIndex(rows) {
     }
   }
 
-  return { byTrip, byTripAndSequence };
+  return { records, byTrip, byTripAndSequence };
 }
 
 function scheduledDepartureForUpdate(trip, update, schedule, delaySeconds, timeZone, nowMs) {
@@ -539,6 +616,64 @@ function partsFormatter(timeZone) {
 
 function pseudoUtcMs(parts) {
   return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+}
+
+function configuredServiceCalendars(env = {}) {
+  const override = env?.TFI_SERVICE_CALENDARS;
+  if (!override) return SERVICE_CALENDARS;
+  if (typeof override === "object") return override;
+
+  try {
+    const parsed = JSON.parse(String(override));
+    return parsed && typeof parsed === "object" ? parsed : SERVICE_CALENDARS;
+  } catch {
+    return SERVICE_CALENDARS;
+  }
+}
+
+function serviceActiveOnDate(serviceId, ymd, serviceCalendars = SERVICE_CALENDARS) {
+  const calendar = serviceCalendars?.[serviceId];
+  if (!Array.isArray(calendar)) return false;
+
+  const exception = calendar[3]?.[ymd];
+  if (exception === 1 || exception === "1") return true;
+  if (exception === 2 || exception === "2") return false;
+
+  const startDate = String(calendar[0] || "");
+  const endDate = String(calendar[1] || "");
+  if (startDate && ymd < startDate) return false;
+  if (endDate && ymd > endDate) return false;
+
+  const mask = Number(calendar[2] || 0);
+  const weekdayIndex = weekdayIndexFromYmd(ymd);
+  return Number.isFinite(weekdayIndex) && (mask & (1 << weekdayIndex)) !== 0;
+}
+
+function ymdInTimeZone(date, timeZone) {
+  const parts = partsInTimeZone(date, timeZone);
+  return formatYmd(parts.year, parts.month, parts.day);
+}
+
+function addYmdDays(ymd, days) {
+  const year = Number(ymd.slice(0, 4));
+  const month = Number(ymd.slice(4, 6));
+  const day = Number(ymd.slice(6, 8));
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return formatYmd(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+}
+
+function weekdayIndexFromYmd(ymd) {
+  const year = Number(ymd.slice(0, 4));
+  const month = Number(ymd.slice(4, 6));
+  const day = Number(ymd.slice(6, 8));
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+
+  const utcDay = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return (utcDay + 6) % 7;
+}
+
+function formatYmd(year, month, day) {
+  return `${String(year).padStart(4, "0")}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}`;
 }
 
 async function boundedText(response, maxChars) {

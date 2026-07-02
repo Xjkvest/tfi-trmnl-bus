@@ -125,6 +125,47 @@ try {
   const queryFallbackPayload = await queryFallbackResponse.json();
   assert.equal(queryFallbackPayload.error, "");
 
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify({ header: { timestamp: Math.floor(Date.now() / 1000) }, entity: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+
+  const scheduledFillEnv = {
+    TFI_SERVICE_CALENDARS: {
+      TEST_SERVICE: ["20260701", "20260731", 4, {}],
+    },
+    TFI_STOP_SCHEDULES: {
+      async get(key) {
+        assert.equal(key, `schedule:${stop.id}`);
+        return JSON.stringify([
+          ["STATIC_TRIP_1", "5", 12 * 3600 + 5 * 60, "City Centre", "15", "City Centre", "TEST_SERVICE"],
+          ["STATIC_TRIP_2", "5", 12 * 3600 + 35 * 60, "City Centre", "15", "City Centre", "TEST_SERVICE"],
+        ]);
+      },
+    },
+  };
+
+  const scheduledFillResponse = await worker.fetch(
+    new Request(`https://worker.example/api/departures?stop_1=1278&limit=5&debug=1`, {
+      headers: { "x-nta-api-key": "test-key" },
+    }),
+    scheduledFillEnv,
+  );
+  assert.equal(scheduledFillResponse.status, 200);
+  const scheduledFillPayload = await scheduledFillResponse.json();
+  assert.equal(scheduledFillPayload.error, "");
+  assert.deepEqual(
+    scheduledFillPayload.departures.map((departure) => departure.realtime_source),
+    ["static_schedule", "static_schedule"],
+  );
+  assert.deepEqual(
+    scheduledFillPayload.departures.map((departure) => departure.route),
+    ["15", "15"],
+  );
+  assert.equal(scheduledFillPayload.departures[0].status, "Scheduled");
+  assert.equal(scheduledFillPayload.debug.static_schedule_rows, 2);
+
   const trmnlUserKeyResponse = await worker.fetch(
     new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=user_wrong_key`),
     {},

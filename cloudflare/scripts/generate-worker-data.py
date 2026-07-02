@@ -38,7 +38,60 @@ def gtfs_time_to_seconds(value: str) -> int | None:
     return hours * 3600 + minutes * 60 + seconds
 
 
-def write_schedule_chunks(zip_path: Path, out_dir: Path, prefix: str) -> None:
+WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+
+
+def build_service_calendars(zip_path: Path) -> dict[str, list]:
+    services: dict[str, list] = {}
+
+    for row in rows_from_zip(zip_path, "calendar.txt"):
+        service_id = row.get("service_id", "")
+        if not service_id:
+            continue
+
+        mask = 0
+        for index, weekday in enumerate(WEEKDAYS):
+            if row.get(weekday) == "1":
+                mask |= 1 << index
+
+        services[service_id] = [
+            row.get("start_date", ""),
+            row.get("end_date", ""),
+            mask,
+            {},
+        ]
+
+    for row in rows_from_zip(zip_path, "calendar_dates.txt"):
+        service_id = row.get("service_id", "")
+        date = row.get("date", "")
+        exception_type = row.get("exception_type", "")
+        if not service_id or not date or exception_type not in {"1", "2"}:
+            continue
+
+        services.setdefault(service_id, ["", "", 0, {}])[3][date] = int(exception_type)
+
+    return services
+
+
+def write_schedule_chunks(
+    zip_path: Path,
+    out_dir: Path,
+    prefix: str,
+    routes: dict[str, str],
+) -> None:
+    trips = {}
+    for row in rows_from_zip(zip_path, "trips.txt"):
+        trip_id = row.get("trip_id", "")
+        route_id = row.get("route_id", "")
+        if not trip_id:
+            continue
+
+        trips[trip_id] = {
+            "route": routes.get(route_id) or route_id,
+            "headsign": row.get("trip_headsign", ""),
+            "service_id": row.get("service_id", ""),
+        }
+
     schedules: dict[str, list[list[str | int]]] = defaultdict(list)
     row_count = 0
 
@@ -60,6 +113,9 @@ def write_schedule_chunks(zip_path: Path, out_dir: Path, prefix: str) -> None:
                 row.get("stop_sequence", ""),
                 event_seconds,
                 row.get("stop_headsign", ""),
+                trips.get(trip_id, {}).get("route", ""),
+                trips.get(trip_id, {}).get("headsign", ""),
+                trips.get(trip_id, {}).get("service_id", ""),
             ]
         )
         row_count += 1
@@ -123,18 +179,20 @@ def main() -> int:
         for row in rows_from_zip(zip_path, "routes.txt")
         if row.get("route_id")
     }
+    service_calendars = build_service_calendars(zip_path)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
         "// Generated from the official TFI static GTFS ZIP. Do not edit by hand.\n"
         f"export const STOPS = {json.dumps(stops, ensure_ascii=False, separators=(',', ':'))};\n"
-        f"export const ROUTES = {json.dumps(routes, ensure_ascii=False, separators=(',', ':'))};\n",
+        f"export const ROUTES = {json.dumps(routes, ensure_ascii=False, separators=(',', ':'))};\n"
+        f"export const SERVICE_CALENDARS = {json.dumps(service_calendars, ensure_ascii=False, separators=(',', ':'))};\n",
         encoding="utf-8",
     )
-    print(f"Wrote {out_path} with {len(stops)} stops and {len(routes)} routes.")
+    print(f"Wrote {out_path} with {len(stops)} stops, {len(routes)} routes, and {len(service_calendars)} service calendars.")
 
     if args.kv_out_dir:
-        write_schedule_chunks(zip_path, Path(args.kv_out_dir), args.kv_chunk_prefix)
+        write_schedule_chunks(zip_path, Path(args.kv_out_dir), args.kv_chunk_prefix, routes)
 
     return 0
 

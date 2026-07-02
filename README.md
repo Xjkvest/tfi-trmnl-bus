@@ -8,6 +8,7 @@ Private TRMNL plugin scaffold for showing the next departures from selected Tran
 - Lets TRMNL poll a small JSON payload for selected stops.
 - Fetches NTA GTFS-Realtime TripUpdates with your own subscription key.
 - Recovers delay-only GTFS-Realtime updates from static `stop_times.txt` schedules stored in Cloudflare KV.
+- Fills sparse real-time feeds with calendar-valid static timetable rows marked `Scheduled`.
 - Renders the result with TRMNL Framework 3.1 markup and a shared departure-board design system.
 
 ## Run Locally
@@ -62,7 +63,7 @@ Current deployment:
 ```text
 Worker: tfi-trmnl-bus
 URL: https://tfi-trmnl-bus.xanderjake.workers.dev
-Version ID: 33519eb8-2b54-4aa4-8784-e1696016f997
+Version ID: 6a0d914f-0df3-4f01-99dc-546688f8d3cd
 ```
 
 ## TRMNL Setup
