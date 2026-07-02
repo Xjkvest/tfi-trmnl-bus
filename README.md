@@ -122,6 +122,8 @@ git commit -m "Record TRMNL plugin id"
 git push
 ```
 
+Use the plugin settings id shown by `trmnlp list`. The webhook/plugin UUID from a TRMNL webhook URL is not the same id and will make `trmnlp push` fail with `Plugin settings not found`.
+
 Manual setup still works:
 
 1. In TRMNL, create a Private Plugin.
