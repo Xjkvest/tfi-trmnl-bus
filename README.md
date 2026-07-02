@@ -96,6 +96,32 @@ docker run --pull always --volume "$PWD:/plugin" --volume "$HOME/.config/trmnlp:
 
 Then run `trmnlp login`, `trmnlp push`, and `trmnlp pull` inside the container. The `pull` step writes the plugin `id` into `trmnl/src/settings.yml`; after that, the GitHub Action can push updates automatically when the `TRMNL_API_KEY` repository secret is set.
 
+`TRMNL_API_KEY` must be your TRMNL user-level API key from `https://trmnl.com/account`. It starts with `user_` and is used only by `trmnlp` / GitHub Actions to upload the private plugin definition. Do not use your device API key here.
+
+The NTA key is different: each plugin installer pastes their own NTA GTFS-R subscription key into the plugin's `NTA GTFS-R API Key` field.
+
+The GitHub Action intentionally skips uploads until `trmnl/src/settings.yml` has an `id:` value, so it cannot accidentally create duplicate private plugins. To record the id, either:
+
+```sh
+cd trmnl
+trmnlp login
+trmnlp push --force
+git add src/settings.yml
+git commit -m "Record TRMNL plugin id"
+git push
+```
+
+Or, if you already created the private plugin in TRMNL:
+
+```sh
+cd trmnl
+trmnlp list
+trmnlp pull --id YOUR_PLUGIN_SETTINGS_ID --force
+git add src/settings.yml
+git commit -m "Record TRMNL plugin id"
+git push
+```
+
 Manual setup still works:
 
 1. In TRMNL, create a Private Plugin.
