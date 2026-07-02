@@ -11,7 +11,7 @@
   {% assign show_stop = true %}
 {% endif %}
 
-<div class="layout layout--col layout--top gap--xsmall tfi-layout tfi-layout--quadrant">
+<div class="layout layout--col md:layout--col layout--top gap--xsmall lg:gap--small portrait:gap--xsmall tfi-layout tfi-layout--quadrant">
   {% if error_text != blank %}
     {% render "tfi_notice", kicker: "Needs attention", title: "Bus departures", body: error_text %}
   {% elsif departures_list.size > 0 %}

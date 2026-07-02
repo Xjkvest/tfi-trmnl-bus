@@ -7,7 +7,7 @@
 {% assign departures_list = payload.departures | default: departures %}
 {% assign source_time_text = payload.source_time | default: source_time %}
 
-<div class="layout layout--col layout--top gap--xsmall tfi-layout tfi-layout--quadrant">
+<div class="layout layout--col md:layout--col layout--top gap--xsmall lg:gap--small portrait:gap--xsmall tfi-layout tfi-layout--quadrant">
   {% if error_text != blank %}
     {% render "tfi_notice", kicker: "Bus", title: "Check setup", body: error_text %}
   {% elsif departures_list.size > 0 %}

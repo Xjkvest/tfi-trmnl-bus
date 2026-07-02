@@ -456,9 +456,9 @@
 
 {% template tfi_table_head %}
   <div class="tfi-board-head">
-    <span class="label label--small">Route</span>
-    <span class="label label--small">Stop</span>
-    <span class="label label--small tfi-right">Time</span>
+    <span class="label label--small">{{ route_label | default: "Route" }}</span>
+    <span class="label label--small">{{ stop_label | default: "Stop" }}</span>
+    <span class="label label--small tfi-right">{{ time_label | default: "Time" }}</span>
   </div>
 {% endtemplate %}
 

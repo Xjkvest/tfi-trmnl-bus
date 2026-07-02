@@ -13,7 +13,7 @@
 {% endif %}
 {% assign count_text = visible_count | append: " rows" %}
 
-<div class="layout layout--col layout--top gap--small tfi-layout tfi-layout--full">
+<div class="layout layout--col md:layout--col layout--top gap--small lg:gap--small portrait:gap--xsmall tfi-layout tfi-layout--full">
   {% if error_text != blank %}
     {% render "tfi_notice", kicker: "Needs attention", title: "Bus departures", body: error_text %}
   {% else %}
@@ -21,7 +21,7 @@
       {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, count_text: count_text %}
 
       <div class="tfi-board">
-        {% render "tfi_table_head" %}
+        {% render "tfi_table_head", route_label: "Route", stop_label: "Stop", time_label: "Time" %}
         {% for departure in departures_list limit: 15 %}
           {% render "tfi_row", departure: departure %}
         {% endfor %}
