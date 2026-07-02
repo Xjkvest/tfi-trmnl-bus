@@ -7,29 +7,23 @@
 {% assign message_text = payload.message | default: message %}
 {% assign departures_list = payload.departures | default: departures %}
 {% assign source_time_text = payload.source_time | default: source_time %}
-{% assign show_stop = false %}
-{% if selected_stops.size > 1 %}
-  {% assign show_stop = true %}
-{% endif %}
 {% assign visible_count = departures_list.size %}
-{% if visible_count > 5 %}
-  {% assign visible_count = 5 %}
+{% if visible_count > 8 %}
+  {% assign visible_count = 8 %}
 {% endif %}
-{% assign count_text = visible_count | append: " shown" %}
+{% assign count_text = visible_count | append: " rows" %}
 
 <div class="layout layout--col layout--top gap--small tfi-layout tfi-layout--full">
   {% if error_text != blank %}
     {% render "tfi_notice", kicker: "Needs attention", title: "Bus departures", body: error_text %}
   {% else %}
     {% if departures_list.size > 0 %}
-      {% assign first_departure = departures_list | first %}
       {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, count_text: count_text %}
-      {% render "tfi_hero", departure: first_departure, show_stop: show_stop %}
 
       <div class="tfi-board">
-        {% render "tfi_table_head", show_stop: show_stop %}
-        {% for departure in departures_list offset: 1 limit: 4 %}
-          {% render "tfi_row", departure: departure, show_stop: show_stop %}
+        {% render "tfi_table_head" %}
+        {% for departure in departures_list limit: 8 %}
+          {% render "tfi_row", departure: departure %}
         {% endfor %}
       </div>
     {% else %}

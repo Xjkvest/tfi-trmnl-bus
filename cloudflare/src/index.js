@@ -1,7 +1,7 @@
 import { ROUTES, STOPS } from "./tfi-static.generated.js";
 
 const DEFAULT_LIMIT = 5;
-const MAX_LIMIT = 5;
+const MAX_LIMIT = 10;
 const DEFAULT_TIME_ZONE = "Europe/Dublin";
 const TRIP_UPDATES_URL = "https://api.nationaltransport.ie/gtfsr/v2/TripUpdates?format=json";
 
@@ -328,19 +328,21 @@ function extractDepartures(feed, stopIds, limit, timeZone, nowMs, schedules = ne
       const stop = STOP_BY_ID.get(stopId);
       const due = dueLabel(eventMs - nowMs);
       const eventDate = new Date(eventMs);
+      const destination =
+        update.stop_headsign ||
+        update.stopHeadsign ||
+        trip.headsign ||
+        scheduleMatch?.headsign ||
+        "";
+
       rows.push({
         epoch: epochSeconds,
         time: formatTime(eventDate, timeZone),
         due: due.label,
         due_minutes: due.minutes,
         route: ROUTES[routeId] || routeId || "Bus",
-        destination:
-          update.stop_headsign ||
-          update.stopHeadsign ||
-          trip.headsign ||
-          scheduleMatch?.headsign ||
-          tripId ||
-          "Scheduled trip",
+        destination,
+        trip_id: tripId,
         stop: stop?.name || stopId,
         stop_code: stop?.code || "",
         stop_id: stopId,

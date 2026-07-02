@@ -6,10 +6,6 @@
 {% assign message_text = payload.message | default: message %}
 {% assign departures_list = payload.departures | default: departures %}
 {% assign source_time_text = payload.source_time | default: source_time %}
-{% assign show_stop = false %}
-{% if selected_stops.size > 1 %}
-  {% assign show_stop = true %}
-{% endif %}
 
 <div class="layout layout--col layout--top gap--xsmall tfi-layout tfi-layout--half-vertical">
   {% if error_text != blank %}
@@ -17,8 +13,8 @@
   {% elsif departures_list.size > 0 %}
     {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, compact: true %}
     <div class="tfi-board">
-      {% for departure in departures_list limit: 5 %}
-        {% render "tfi_row", departure: departure, compact: true, show_stop: show_stop %}
+      {% for departure in departures_list limit: 6 %}
+        {% render "tfi_row", departure: departure, compact: true %}
       {% endfor %}
     </div>
   {% else %}

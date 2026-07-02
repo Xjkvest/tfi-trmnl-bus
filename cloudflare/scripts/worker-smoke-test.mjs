@@ -204,6 +204,14 @@ try {
     balancedPayload.departures.map((departure) => departure.stop_id),
     [stop.id, secondStop.id],
   );
+  assert.deepEqual(
+    balancedPayload.departures.map((departure) => departure.destination),
+    ["", ""],
+  );
+  assert.ok(
+    balancedPayload.departures.every((departure) => departure.trip_id),
+    "expected trip ids to remain available for debugging",
+  );
 } finally {
   globalThis.fetch = originalFetch;
   Date.now = originalNow;

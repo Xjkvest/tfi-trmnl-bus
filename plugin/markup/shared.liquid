@@ -176,7 +176,7 @@
   .tfi-subline {
     display: flex;
     min-width: 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
@@ -280,8 +280,12 @@
   .tfi-row-subline {
     display: flex;
     min-width: 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
+  }
+
+  .tfi-row-headsign {
+    max-width: 58%;
   }
 
   .tfi-row-time {
@@ -353,6 +357,23 @@
   .tfi-quiet {
     color: #555;
   }
+
+  @media (max-width: 560px) {
+    .tfi-board-head,
+    .tfi-row {
+      grid-template-columns: 54px minmax(0, 1fr) 68px;
+      gap: 6px;
+    }
+
+    .tfi-row {
+      p\061 dding-left: 8px;
+      p\061 dding-right: 8px;
+    }
+
+    .tfi-row-headsign {
+      max-width: 100%;
+    }
+  }
 </style>
 
 {% template tfi_header %}
@@ -360,14 +381,11 @@
     <div class="tfi-min">
       <span class="tfi-kicker">TFI live departures</span>
       <span class="title{% if compact %} title--small{% else %} title--medium{% endif %} tfi-stop" data-clamp="1">
-        {{ stops_label_text | default: "Selected stops" }}
+        {% if source_time_text != blank %}Feed {{ source_time_text }}{% else %}Feed pending{% endif %}
       </span>
     </div>
     <div class="tfi-stamp">
-      {% if source_time_text != blank %}
-        <span class="tfi-chip tfi-chip--dark">Feed {{ source_time_text }}</span>
-      {% endif %}
-      <span class="tfi-chip">Updated {{ generated_at_text | default: "--:--" }}</span>
+      <span class="tfi-chip tfi-chip--dark">Synced {{ generated_at_text | default: "--:--" }}</span>
       {% if count_text != blank and compact != true %}
         <span class="label label--small">{{ count_text }}</span>
       {% endif %}
@@ -382,20 +400,23 @@
     </div>
     <div class="tfi-hero-main">
       <span class="tfi-destination {% if compact %}tfi-destination--compact{% else %}tfi-destination--hero{% endif %}" data-clamp="{% if compact %}1{% else %}2{% endif %}">
-        {{ departure.destination }}
+        {{ departure.stop }}
       </span>
       <div class="tfi-subline">
-        {% if show_stop %}
+        {% if departure.destination != blank %}
+          <span class="label label--small label--underline" data-clamp="1">{{ departure.destination }}</span>
+        {% endif %}
+        {% if departure.stop_code != blank %}
           <span class="label label--small label--underline" data-clamp="1">
-            {{ departure.stop }}{% if departure.stop_code != blank %} #{{ departure.stop_code }}{% endif %}
+            Stop code: #{{ departure.stop_code }}
           </span>
         {% endif %}
         <span class="label label--small label--underline">{{ departure.status }}</span>
       </div>
     </div>
     <div class="tfi-due">
-      <span class="value value--large tfi-due-main{% if compact %} tfi-due-main--compact{% endif %}" data-value-fit="true">{{ departure.due }}</span>
-      <span class="label label--small">at {{ departure.time }}</span>
+      <span class="value value--large tfi-due-main{% if compact %} tfi-due-main--compact{% endif %}" data-value-fit="true">{{ departure.time }}</span>
+      <span class="label label--small">{{ departure.due }}</span>
     </div>
   </div>
 {% endtemplate %}
@@ -406,23 +427,20 @@
       <span class="tfi-route{% if compact %} tfi-route--compact{% endif %}{% if mini %} tfi-route--mini{% endif %}" data-value-fit="true">{{ departure.route }}</span>
     </div>
     <div class="tfi-row-main">
-      <span class="title title--small tfi-row-destination" data-clamp="1">{{ departure.destination }}</span>
-      {% unless tight %}
-        <div class="tfi-row-subline">
-          {% if show_stop %}
-            <span class="label label--small label--underline" data-clamp="1">
-              {{ departure.stop }}{% if departure.stop_code != blank %} #{{ departure.stop_code }}{% endif %}
-            </span>
-          {% endif %}
-          <span class="label label--small label--underline">{{ departure.status }}</span>
-        </div>
-      {% elsif show_stop %}
-        <span class="label label--small" data-clamp="1">{{ departure.stop }}</span>
-      {% endunless %}
+      <span class="title title--small tfi-row-destination" data-clamp="1">{{ departure.stop }}</span>
+      <div class="tfi-row-subline">
+        {% if departure.destination != blank %}
+          <span class="label label--small label--underline tfi-row-headsign" data-clamp="1">{{ departure.destination }}</span>
+        {% endif %}
+        {% if departure.stop_code != blank %}
+          <span class="label label--small label--underline" data-clamp="1">Stop code: #{{ departure.stop_code }}</span>
+        {% endif %}
+        <span class="label label--small label--underline">{{ departure.status }}</span>
+      </div>
     </div>
     <div class="tfi-row-time">
-      <span class="tfi-time-pill" data-value-fit="true">{{ departure.due }}</span>
-      <span class="label label--small">{{ departure.time }}</span>
+      <span class="tfi-time-pill" data-value-fit="true">{{ departure.time }}</span>
+      <span class="label label--small">{{ departure.due }}</span>
     </div>
   </div>
 {% endtemplate %}
@@ -430,8 +448,8 @@
 {% template tfi_table_head %}
   <div class="tfi-board-head">
     <span class="label label--small">Route</span>
-    <span class="label label--small">{% if show_stop %}Destination / stop{% else %}Destination{% endif %}</span>
-    <span class="label label--small tfi-right">Due</span>
+    <span class="label label--small">Stop / destination</span>
+    <span class="label label--small tfi-right">Time</span>
   </div>
 {% endtemplate %}
 

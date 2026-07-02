@@ -50,10 +50,10 @@ custom_fields:
   - keyname: departure_count
     field_type: number
     name: Departures To Show
-    description: The screen is designed for five rows.
-    default: 5
+    description: Full-screen layouts can show up to eight rows; smaller layouts automatically show fewer.
+    default: 8
     min: 1
-    max: 5
+    max: 10
   - keyname: time_zone
     field_type: time_zone
     name: Time Zone

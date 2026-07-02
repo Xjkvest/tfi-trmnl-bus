@@ -10,7 +10,7 @@ custom_fields:
   stop_3: ""
   stop_4: ""
   stop_5: ""
-  departure_count: "5"
+  departure_count: "8"
   time_zone: Europe/Dublin
 variables:
   trmnl:
