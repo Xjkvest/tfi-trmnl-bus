@@ -96,6 +96,16 @@ try {
   const unresolvedKeyPayload = await unresolvedKeyResponse.json();
   assert.match(unresolvedKeyPayload.error, /not substituted/);
 
+  const queryFallbackResponse = await worker.fetch(
+    new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=query-test-key`, {
+      headers: { "x-nta-api-key": "##{{ nta_api_key }}" },
+    }),
+    env,
+  );
+  assert.equal(queryFallbackResponse.status, 200);
+  const queryFallbackPayload = await queryFallbackResponse.json();
+  assert.equal(queryFallbackPayload.error, "");
+
   const trmnlUserKeyResponse = await worker.fetch(
     new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=user_wrong_key`),
     {},

@@ -546,17 +546,20 @@ async function boundedText(response, maxChars) {
 
 function getApiKey(request, params) {
   const auth = request.headers.get("authorization") || "";
-  return normalizeApiKey(
+  const candidates = [
     request.headers.get("x-nta-api-key") ||
-    request.headers.get("x-api-key") ||
-    request.headers.get("subscription-key") ||
-    auth.replace(/^Bearer\s+/i, "").trim() ||
-    params.get("api_key") ||
-    params.get("nta_api_key") ||
-    params.get("subscription-key") ||
-    params.get("subscription_key") ||
-    ""
-  );
+      request.headers.get("x-api-key") ||
+      request.headers.get("subscription-key") ||
+      auth.replace(/^Bearer\s+/i, "").trim(),
+    params.get("subscription-key"),
+    params.get("subscription_key"),
+    params.get("api_key"),
+    params.get("nta_api_key"),
+  ]
+    .map(normalizeApiKey)
+    .filter(Boolean);
+
+  return candidates.find((value) => !isUnresolvedTemplate(value)) || candidates[0] || "";
 }
 
 function normalizeApiKey(value) {

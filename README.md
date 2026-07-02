@@ -62,7 +62,7 @@ Current deployment:
 ```text
 Worker: tfi-trmnl-bus
 URL: https://tfi-trmnl-bus.xanderjake.workers.dev
-Version ID: 4bc84e85-1d93-436a-8689-2f1948929cfc
+Version ID: 32c1739a-92b3-45b0-9b9b-ff1378980556
 ```
 
 ## TRMNL Setup
@@ -131,13 +131,13 @@ Manual setup still works:
 3. Set Polling URL to:
 
 ```text
-https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?stop_1=##{{ stop_1 }}&stop_2=##{{ stop_2 }}&stop_3=##{{ stop_3 }}&stop_4=##{{ stop_4 }}&stop_5=##{{ stop_5 }}&limit=##{{ departure_count }}&time_zone=##{{ time_zone }}
+https://tfi-trmnl-bus.xanderjake.workers.dev/api/departures?subscription-key=##{{ nta_api_key | url_encode }}&stop_1=##{{ stop_1 }}&stop_2=##{{ stop_2 }}&stop_3=##{{ stop_3 }}&stop_4=##{{ stop_4 }}&stop_5=##{{ stop_5 }}&limit=##{{ departure_count }}&time_zone=##{{ time_zone }}
 ```
 
 4. Set Polling Headers to:
 
 ```text
-x-nta-api-key=##{{ nta_api_key }}
+Leave this blank.
 ```
 
 5. Paste `plugin/form-fields.yml` into the custom fields editor.
@@ -157,7 +157,7 @@ TRMNL markup fields need the literal Liquid/HTML/CSS contents. Do not paste a Gi
 
 The Stop fields intentionally use plain text now. TRMNL's `xhrSelectSearch` field is documented to send search text as `query`, but in practice the private-plugin settings dropdown can behave like a tiny static list. Plain text fields plus the Worker-hosted stop finder avoid that UI limit while keeping the plugin polling URL the same.
 
-Paste only the NTA subscription key into the plugin field. The Worker also tolerates common copied formats such as `subscription-key=KEY`, `x-api-key: KEY`, or quoted keys, but the plain key is best.
+Paste only the NTA subscription key into the plugin field. The Worker also tolerates common copied formats such as `subscription-key=KEY`, `x-api-key: KEY`, or quoted keys, but the plain key is best. TRMNL documents custom field interpolation in polling headers, but this plugin uses the polling URL for the key because some private-plugin instances leave header placeholders unsubstituted.
 
 Do not paste the TRMNL user API key here. TRMNL keys often start with `user_`; the plugin needs the NTA developer portal subscription key.
 
