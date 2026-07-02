@@ -16,7 +16,7 @@
     {% render "tfi_notice", kicker: "Needs attention", title: "Bus departures", body: error_text %}
   {% elsif departures_list.size > 0 %}
     {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, compact: true %}
-    {% for departure in departures_list limit: 3 %}
+    {% for departure in departures_list limit: 4 %}
       {% render "tfi_row", departure: departure, compact: true, tight: true, mini: true, show_stop: show_stop %}
     {% endfor %}
   {% else %}

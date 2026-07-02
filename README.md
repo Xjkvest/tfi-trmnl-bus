@@ -158,7 +158,7 @@ TRMNL markup fields need the literal Liquid/HTML/CSS contents. Do not paste a Gi
 
 The Stop fields intentionally use plain text now. TRMNL's `xhrSelectSearch` field is documented to send search text as `query`, but in practice the private-plugin settings dropdown can behave like a tiny static list. Plain text fields plus the Worker-hosted stop finder avoid that UI limit while keeping the plugin polling URL the same.
 
-The board is stop-first: each row shows the route, stop name, optional destination/headsign, stop code, status, departure time, and due label. The plugin fetches up to fifteen departures automatically; full and vertical layouts show complete rows that fit the viewport, up to fourteen on tall vertical screens, half-horizontal shows three, and quadrant shows two.
+The board is stop-first: each row shows the route, stop name, optional destination/headsign, stop code, status, departure time, and due label. The plugin fetches up to fifteen departures automatically; full and vertical layouts show complete rows that fit the viewport, up to fourteen on tall vertical screens, half-horizontal shows five, and quadrant shows four.
 
 Paste only the NTA subscription key into the plugin field. The Worker also tolerates common copied formats such as `subscription-key=KEY`, `x-api-key: KEY`, quoted keys, or TRMNL debug values displayed with a leading `##`, but the plain key is best. This plugin uses the polling URL for the key because some private-plugin instances leave header placeholders unsubstituted.
 

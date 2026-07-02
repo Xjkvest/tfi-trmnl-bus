@@ -13,7 +13,7 @@
   {% elsif departures_list.size > 0 %}
     {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, compact: true %}
     <div class="tfi-board">
-      {% for departure in departures_list limit: 3 %}
+      {% for departure in departures_list limit: 5 %}
         {% render "tfi_row", departure: departure, compact: true, tight: true %}
       {% endfor %}
     </div>

@@ -11,10 +11,8 @@
   {% if error_text != blank %}
     {% render "tfi_notice", kicker: "Bus", title: "Check setup", body: error_text %}
   {% elsif departures_list.size > 0 %}
-    {% assign first_departure = departures_list | first %}
     {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, compact: true %}
-    {% render "tfi_row", departure: first_departure, compact: true, tight: true, mini: true %}
-    {% for departure in departures_list offset: 1 limit: 1 %}
+    {% for departure in departures_list limit: 4 %}
       {% render "tfi_row", departure: departure, compact: true, tight: true, mini: true %}
     {% endfor %}
   {% else %}
