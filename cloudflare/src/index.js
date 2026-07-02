@@ -189,7 +189,7 @@ async function departuresPayload(request, params, env = {}) {
   ]));
   const limit = clampNumber(params.get("limit") || params.get("departure_count"), DEFAULT_LIMIT, 1, MAX_LIMIT);
   const timeZone = validTimeZone(params.get("time_zone") || params.get("tz") || DEFAULT_TIME_ZONE);
-  const debug = ["1", "true", "yes"].includes(String(params.get("debug") || "").toLowerCase());
+  const debug = ["1", "true", "yes"].includes(normalizeFormValue(params.get("debug")).toLowerCase());
   const now = Date.now();
   const generatedAt = new Date(now);
   const selectedStops = stopIds.map((id) => {
@@ -563,26 +563,35 @@ function getApiKey(request, params) {
 }
 
 function normalizeApiKey(value) {
-  let text = String(value || "").trim();
+  let text = stripWrappingQuotes(normalizeFormValue(value));
   text = text.replace(/^Bearer\s+/i, "").trim();
+  text = stripWrappingQuotes(normalizeFormValue(text));
 
   const assignment = text.match(/^(?:x-nta-api-key|x-api-key|subscription-key|subscription_key|api_key|nta_api_key)\s*[:=]\s*(.+)$/i);
   if (assignment) {
     text = assignment[1].trim();
   }
 
-  return text.replace(/^["']|["']$/g, "").trim();
+  return stripWrappingQuotes(normalizeFormValue(text));
 }
 
 function isUnresolvedTemplate(value) {
-  return value.includes("{{") || value.includes("}}") || value.includes("##");
+  return String(value || "").includes("{{") || String(value || "").includes("}}");
+}
+
+function normalizeFormValue(value) {
+  return String(value ?? "").trim().replace(/^#+/, "").trim();
+}
+
+function stripWrappingQuotes(value) {
+  return String(value || "").replace(/^["']|["']$/g, "").trim();
 }
 
 function normalizeStopIds(values) {
   const stopIds = [];
   for (const value of values) {
     if (!value) continue;
-    const text = String(value).trim();
+    const text = normalizeFormValue(value);
     if (!text) continue;
 
     if (text.startsWith("[") && text.endsWith("]")) {
@@ -600,7 +609,7 @@ function normalizeStopIds(values) {
     }
 
     for (const part of text.split(",")) {
-      addUnique(stopIds, part.trim());
+      addUnique(stopIds, normalizeFormValue(part));
     }
   }
   return stopIds;
@@ -610,7 +619,7 @@ function resolveStopInputs(values) {
   const stopIds = [];
 
   for (const value of values) {
-    const raw = String(value || "").trim();
+    const raw = normalizeFormValue(value);
     if (!raw) continue;
 
     const stopById = STOP_BY_ID.get(raw);
@@ -620,7 +629,7 @@ function resolveStopInputs(values) {
     }
 
     const labelCode = raw.match(/\(([^)]+)\)\s*$/)?.[1];
-    const normalizedCode = String(labelCode || raw).replace(/^#/, "").trim();
+    const normalizedCode = normalizeFormValue(labelCode || raw);
     const stopByCode = STOP_BY_CODE.get(normalizedCode);
     if (stopByCode) {
       addUnique(stopIds, stopByCode.id);
@@ -649,7 +658,7 @@ function stopsLabel(stops) {
 }
 
 function clampNumber(value, fallback, min, max) {
-  const parsed = Number.parseInt(String(value ?? ""), 10);
+  const parsed = Number.parseInt(normalizeFormValue(value), 10);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(min, Math.min(parsed, max));
 }
@@ -673,7 +682,7 @@ function delayStatus(delaySeconds) {
 }
 
 function validTimeZone(value) {
-  const timeZone = String(value || DEFAULT_TIME_ZONE);
+  const timeZone = normalizeFormValue(value || DEFAULT_TIME_ZONE) || DEFAULT_TIME_ZONE;
   try {
     new Intl.DateTimeFormat("en-IE", { timeZone }).format(new Date());
     return timeZone;

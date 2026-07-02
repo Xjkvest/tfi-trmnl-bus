@@ -86,6 +86,17 @@ try {
   const wrappedKeyPayload = await wrappedKeyResponse.json();
   assert.equal(wrappedKeyPayload.error, "");
 
+  const trmnlPrefixedResponse = await worker.fetch(
+    new Request(
+      `https://worker.example/api/departures?subscription-key=%23%23prefixed-test-key&stop_1=%23%231278&limit=%23%235&time_zone=%23%23Europe%2FDublin`,
+    ),
+    env,
+  );
+  assert.equal(trmnlPrefixedResponse.status, 200);
+  const trmnlPrefixedPayload = await trmnlPrefixedResponse.json();
+  assert.equal(trmnlPrefixedPayload.error, "");
+  assert.equal(trmnlPrefixedPayload.departures.length, 1);
+
   const unresolvedKeyResponse = await worker.fetch(
     new Request(`https://worker.example/api/departures?stop_1=1278`, {
       headers: { "x-nta-api-key": "##{{ nta_api_key }}" },
@@ -95,6 +106,14 @@ try {
   assert.equal(unresolvedKeyResponse.status, 200);
   const unresolvedKeyPayload = await unresolvedKeyResponse.json();
   assert.match(unresolvedKeyPayload.error, /not substituted/);
+
+  const unresolvedQueryKeyResponse = await worker.fetch(
+    new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=%23%23%7B%7B%20nta_api_key%20%7D%7D`),
+    {},
+  );
+  assert.equal(unresolvedQueryKeyResponse.status, 200);
+  const unresolvedQueryKeyPayload = await unresolvedQueryKeyResponse.json();
+  assert.match(unresolvedQueryKeyPayload.error, /not substituted/);
 
   const queryFallbackResponse = await worker.fetch(
     new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=query-test-key`, {
