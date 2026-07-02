@@ -78,6 +78,32 @@ try {
   assert.equal(payload.debug.schedule_fallback_rows, 1);
   assert.equal(payload.debug.schedule_stops_loaded, 1);
 
+  const wrappedKeyResponse = await worker.fetch(
+    new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=subscription-key%3Dwrapped-test-key`),
+    env,
+  );
+  assert.equal(wrappedKeyResponse.status, 200);
+  const wrappedKeyPayload = await wrappedKeyResponse.json();
+  assert.equal(wrappedKeyPayload.error, "");
+
+  const unresolvedKeyResponse = await worker.fetch(
+    new Request(`https://worker.example/api/departures?stop_1=1278`, {
+      headers: { "x-nta-api-key": "##{{ nta_api_key }}" },
+    }),
+    {},
+  );
+  assert.equal(unresolvedKeyResponse.status, 200);
+  const unresolvedKeyPayload = await unresolvedKeyResponse.json();
+  assert.match(unresolvedKeyPayload.error, /not substituted/);
+
+  const trmnlUserKeyResponse = await worker.fetch(
+    new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=user_wrong_key`),
+    {},
+  );
+  assert.equal(trmnlUserKeyResponse.status, 200);
+  const trmnlUserKeyPayload = await trmnlUserKeyResponse.json();
+  assert.match(trmnlUserKeyPayload.error, /TRMNL user API key/);
+
   globalThis.fetch = async () =>
     new Response(
       JSON.stringify({

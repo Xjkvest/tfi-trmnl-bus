@@ -66,7 +66,7 @@ function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-CSRF-Token, x-nta-api-key, x-api-key, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, X-CSRF-Token, x-nta-api-key, x-api-key, subscription-key, Authorization",
   };
 }
 
@@ -219,6 +219,16 @@ async function departuresPayload(request, params, env = {}) {
 
   if (!apiKey) {
     payload.error = "Missing NTA API key.";
+    return payload;
+  }
+
+  if (isUnresolvedTemplate(apiKey)) {
+    payload.error = "NTA API key was not substituted by TRMNL. Save the plugin settings and force refresh.";
+    return payload;
+  }
+
+  if (apiKey.startsWith("user_")) {
+    payload.error = "The TRMNL user API key was entered as the NTA key. Paste your NTA GTFS-R subscription key instead.";
     return payload;
   }
 
@@ -536,15 +546,33 @@ async function boundedText(response, maxChars) {
 
 function getApiKey(request, params) {
   const auth = request.headers.get("authorization") || "";
-  return (
+  return normalizeApiKey(
     request.headers.get("x-nta-api-key") ||
     request.headers.get("x-api-key") ||
+    request.headers.get("subscription-key") ||
     auth.replace(/^Bearer\s+/i, "").trim() ||
     params.get("api_key") ||
     params.get("nta_api_key") ||
     params.get("subscription-key") ||
+    params.get("subscription_key") ||
     ""
   );
+}
+
+function normalizeApiKey(value) {
+  let text = String(value || "").trim();
+  text = text.replace(/^Bearer\s+/i, "").trim();
+
+  const assignment = text.match(/^(?:x-nta-api-key|x-api-key|subscription-key|subscription_key|api_key|nta_api_key)\s*[:=]\s*(.+)$/i);
+  if (assignment) {
+    text = assignment[1].trim();
+  }
+
+  return text.replace(/^["']|["']$/g, "").trim();
+}
+
+function isUnresolvedTemplate(value) {
+  return value.includes("{{") || value.includes("}}") || value.includes("##");
 }
 
 function normalizeStopIds(values) {
