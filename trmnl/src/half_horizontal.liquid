@@ -12,11 +12,14 @@
     {% render "tfi_notice", kicker: "Needs attention", title: "Bus departures", body: error_text %}
   {% elsif departures_list.size > 0 %}
     {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, compact: true %}
-    <div class="tfi-board">
-      {% for departure in departures_list limit: 5 %}
+    <table class="table table--xsmall tfi-table tfi-table--compact" data-table-limit="true" data-table-max-height="auto">
+      {% render "tfi_table_head", route_label: "Route", stop_label: "Stop", time_label: "Time" %}
+      <tbody>
+      {% for departure in departures_list limit: 15 %}
         {% render "tfi_row", departure: departure, compact: true, tight: true %}
       {% endfor %}
-    </div>
+      </tbody>
+    </table>
   {% else %}
     {% render "tfi_notice", kicker: "Nothing due", title: message_text, body: stops_label_text %}
   {% endif %}

@@ -6,19 +6,19 @@
 {% assign departures_list = payload.departures | default: departures %}
 {% assign message_text = payload.message | default: message %}
 {% assign source_time_text = payload.source_time | default: source_time %}
-{% assign show_stop = false %}
-{% if selected_stops.size > 1 %}
-  {% assign show_stop = true %}
-{% endif %}
-
 <div class="layout layout--col md:layout--col layout--top gap--xsmall lg:gap--small portrait:gap--xsmall tfi-layout tfi-layout--quadrant">
   {% if error_text != blank %}
     {% render "tfi_notice", kicker: "Needs attention", title: "Bus departures", body: error_text %}
   {% elsif departures_list.size > 0 %}
     {% render "tfi_header", stops_label_text: stops_label_text, generated_at_text: generated_at_text, source_time_text: source_time_text, compact: true %}
-    {% for departure in departures_list limit: 4 %}
-      {% render "tfi_row", departure: departure, compact: true, tight: true, mini: true, show_stop: show_stop %}
-    {% endfor %}
+    <table class="table table--xsmall tfi-table tfi-table--compact" data-table-limit="true" data-table-max-height="auto">
+      {% render "tfi_table_head", route_label: "Route", stop_label: "Stop", time_label: "Time" %}
+      <tbody>
+      {% for departure in departures_list limit: 15 %}
+        {% render "tfi_row", departure: departure, compact: true, tight: true, mini: true %}
+      {% endfor %}
+      </tbody>
+    </table>
   {% else %}
     {% render "tfi_notice", kicker: "Nothing due", title: message_text, body: stops_label_text %}
   {% endif %}

@@ -208,53 +208,32 @@
     font\02d size: 25px;
   }
 
-  .tfi-board {
-    display: flex;
+  .tfi-table {
     flex: 1;
     min-height: 0;
-    flex-direction: column;
-    overflow: hidden;
-    border: 2px solid #000;
-    border\02d radius: 8px;
+    table-layout: fixed;
   }
 
-  .tfi-board-head,
-  .tfi-row {
-    display: grid;
-    grid-template-columns: 68px minmax(0, 1fr) 82px;
-    gap: 8px;
-    align-items: center;
+  .tfi-table th,
+  .tfi-table td {
+    vertical-align: middle;
   }
 
-  .tfi-board-head {
-    min-height: 22px;
-    p\061 dding: 0 10px;
-    border-bottom: 1px solid #000;
-    background: #f2f2f2;
+  .tfi-table-route {
+    width: 68px;
   }
 
-  .tfi-row {
-    flex: 0 0 auto;
-    min-height: 48px;
-    p\061 dding: 5px 10px 4px;
-    border-bottom: 1px solid #000;
+  .tfi-table-time {
+    width: 82px;
+    text\02d align: right;
   }
 
-  .tfi-row:last-child {
-    border-bottom: 0;
+  .tfi-table--compact .tfi-table-route {
+    width: 50px;
   }
 
-  .tfi-row--compact {
-    grid-template-columns: 50px minmax(0, 1fr) 64px;
-    gap: 7px;
-    min-height: 42px;
-    p\061 dding: 4px 8px;
-  }
-
-  .tfi-row--tight {
-    min-height: 34px;
-    p\061 dding-top: 3px;
-    p\061 dding-bottom: 3px;
+  .tfi-table--compact .tfi-table-time {
+    width: 64px;
   }
 
   .tfi-row-main {
@@ -309,15 +288,11 @@
     line-height: 1;
   }
 
-  .tfi-row--compact .tfi-time-pill {
+  .tfi-table--compact .tfi-time-pill {
     min-width: 48px;
     min-height: 20px;
     p\061 dding: 1px 4px;
     font\02d size: 13px;
-  }
-
-  .tfi-right {
-    text\02d align: right;
   }
 
   .tfi-titlebar-mark {
@@ -354,31 +329,13 @@
     color: #555;
   }
 
-  .tfi-layout--full .tfi-row:nth-of-type(n+16),
-  .tfi-layout--half-vertical .tfi-row:nth-of-type(n+16) {
-    display: none;
-  }
-
-  @media (max-height: 560px) {
-    .tfi-layout--full .tfi-row:nth-of-type(n+9) {
-      display: none;
-    }
-
-    .tfi-layout--half-vertical .tfi-row:nth-of-type(n+10) {
-      display: none;
-    }
-  }
-
   @media (max-width: 560px) {
-    .tfi-board-head,
-    .tfi-row {
-      grid-template-columns: 50px minmax(0, 1fr) 66px;
-      gap: 6px;
+    .tfi-table-route {
+      width: 50px;
     }
 
-    .tfi-row {
-      p\061 dding-left: 8px;
-      p\061 dding-right: 8px;
+    .tfi-table-time {
+      width: 66px;
     }
 
     .tfi-route {
@@ -434,32 +391,40 @@
 {% endtemplate %}
 
 {% template tfi_row %}
-  <div class="tfi-row{% if compact %} tfi-row--compact{% endif %}{% if tight %} tfi-row--tight{% endif %}">
-    <div class="tfi-route-cell">
-      <span class="tfi-route{% if compact %} tfi-route--compact{% endif %}{% if mini %} tfi-route--mini{% endif %}" data-value-fit="true">{{ departure.route }}</span>
-    </div>
-    <div class="tfi-row-main">
-      <span class="title title--small tfi-row-destination" data-clamp="1">{{ departure.stop }}</span>
-      {% if departure.destination != blank %}
-        <span class="label label--small tfi-row-headsign" data-clamp="1">{{ departure.destination }}</span>
-      {% endif %}
-      <span class="label label--small tfi-row-meta" data-clamp="1">
-        {% if departure.stop_code != blank %}Stop code: #{{ departure.stop_code }}{% endif %}{% if departure.stop_code != blank and departure.status != blank %} / {% endif %}{{ departure.status }}
-      </span>
-    </div>
-    <div class="tfi-row-time">
-      <span class="tfi-time-pill" data-value-fit="true">{{ departure.time }}</span>
-      <span class="label label--small">{{ departure.due }}</span>
-    </div>
-  </div>
+  <tr>
+    <td class="tfi-table-route">
+      <div class="tfi-route-cell">
+        <span class="tfi-route{% if compact %} tfi-route--compact{% endif %}{% if mini %} tfi-route--mini{% endif %}" data-value-fit="true">{{ departure.route }}</span>
+      </div>
+    </td>
+    <td>
+      <div class="tfi-row-main">
+        <span class="title title--small tfi-row-destination" data-clamp="1">{{ departure.stop }}</span>
+        {% if departure.destination != blank %}
+          <span class="label label--small tfi-row-headsign" data-clamp="1">{{ departure.destination }}</span>
+        {% endif %}
+        <span class="label label--small tfi-row-meta" data-clamp="1">
+          {% if departure.stop_code != blank %}Stop code: #{{ departure.stop_code }}{% endif %}{% if departure.stop_code != blank and departure.status != blank %} / {% endif %}{{ departure.status }}
+        </span>
+      </div>
+    </td>
+    <td class="tfi-table-time">
+      <div class="tfi-row-time">
+        <span class="tfi-time-pill" data-value-fit="true">{{ departure.time }}</span>
+        <span class="label label--small">{{ departure.due }}</span>
+      </div>
+    </td>
+  </tr>
 {% endtemplate %}
 
 {% template tfi_table_head %}
-  <div class="tfi-board-head">
-    <span class="label label--small">{{ route_label | default: "Route" }}</span>
-    <span class="label label--small">{{ stop_label | default: "Stop" }}</span>
-    <span class="label label--small tfi-right">{{ time_label | default: "Time" }}</span>
-  </div>
+  <thead>
+    <tr>
+      <th class="tfi-table-route"><span class="title title--small">{{ route_label | default: "Route" }}</span></th>
+      <th><span class="title title--small">{{ stop_label | default: "Stop" }}</span></th>
+      <th class="tfi-table-time"><span class="title title--small">{{ time_label | default: "Time" }}</span></th>
+    </tr>
+  </thead>
 {% endtemplate %}
 
 {% template tfi_notice %}
