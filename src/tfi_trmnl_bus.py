@@ -30,7 +30,7 @@ DEFAULT_GTFS_URL = "https://www.transportforireland.ie/transitData/Data/GTFS_Rea
 DEFAULT_TRIP_UPDATES_URL = "https://api.nationaltransport.ie/gtfsr/v2/TripUpdates?format=json"
 DEFAULT_TIME_ZONE = "Europe/Dublin"
 DEFAULT_LIMIT = 5
-MAX_LIMIT = 10
+MAX_LIMIT = 45
 
 
 def get_any(source: dict[str, Any] | None, *keys: str, default: Any = None) -> Any:

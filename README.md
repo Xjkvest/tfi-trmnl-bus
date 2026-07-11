@@ -25,6 +25,8 @@ curl 'http://127.0.0.1:8787/api/departures?stop_1=1278&limit=15' \
   -H 'x-nta-api-key: YOUR_NTA_KEY'
 ```
 
+`limit` accepts up to 45 departures. The higher range is intended for slow-refresh displays that need to preload several hours of fixed timetable times; the TRMNL templates continue to request and render 15.
+
 For TRMNL to poll it, deploy the service somewhere public or run it behind a tunnel. The service has no third-party Python dependencies.
 
 ## Cloudflare Worker

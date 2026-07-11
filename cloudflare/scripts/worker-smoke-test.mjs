@@ -139,7 +139,7 @@ try {
       async get(key) {
         assert.equal(key, `schedule:${stop.id}`);
         return JSON.stringify(
-          Array.from({ length: 16 }, (_, index) => [
+          Array.from({ length: 50 }, (_, index) => [
             `STATIC_TRIP_${index + 1}`,
             "5",
             12 * 3600 + (index + 1) * 5 * 60,
@@ -179,7 +179,7 @@ try {
   );
   assert.equal(maxLimitResponse.status, 200);
   const maxLimitPayload = await maxLimitResponse.json();
-  assert.equal(maxLimitPayload.departures.length, 15);
+  assert.equal(maxLimitPayload.departures.length, 45);
 
   const trmnlUserKeyResponse = await worker.fetch(
     new Request(`https://worker.example/api/departures?stop_1=1278&subscription-key=user_wrong_key`),

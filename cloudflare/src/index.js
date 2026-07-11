@@ -1,7 +1,7 @@
 import { ROUTES, SERVICE_CALENDARS, STOPS } from "./tfi-static.generated.js";
 
 const DEFAULT_LIMIT = 5;
-const MAX_LIMIT = 15;
+const MAX_LIMIT = 45;
 const DEFAULT_TIME_ZONE = "Europe/Dublin";
 const TRIP_UPDATES_URL = "https://api.nationaltransport.ie/gtfsr/v2/TripUpdates?format=json";
 
