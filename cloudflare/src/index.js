@@ -97,8 +97,8 @@ function staticFeedStatus() {
 async function feedHealth(env) {
   const status = { ...staticFeedStatus(), schedules_ready: false };
   try {
-    const text = await env?.TFI_STOP_SCHEDULES?.get(`feed:${FEED_METADATA.version}`);
-    const manifest = text ? JSON.parse(text) : null;
+    const response = await env?.TFI_SCHEDULE_ASSETS?.fetch(new Request(`https://schedule-assets.internal/feeds/${FEED_METADATA.version}.json`));
+    const manifest = response?.ok ? await response.json() : null;
     status.schedules_ready = manifest?.version === FEED_METADATA.version && manifest.schedule_stops > 0;
   } catch {
     // Health reports an unavailable snapshot without exposing provider errors.
@@ -507,8 +507,8 @@ function staticScheduleDepartures(stopIds, limit, timeZone, nowMs, schedules, se
 }
 
 async function loadStopSchedules(env, stopIds) {
-  const binding = env?.TFI_STOP_SCHEDULES;
-  if (!binding || typeof binding.get !== "function") {
+  const binding = env?.TFI_SCHEDULE_ASSETS;
+  if (!binding || typeof binding.fetch !== "function") {
     return new Map();
   }
 
@@ -516,10 +516,11 @@ async function loadStopSchedules(env, stopIds) {
   await Promise.all(
     stopIds.map(async (stopId) => {
       try {
-        const text = await binding.get(`schedule:${FEED_METADATA.version}:${stopId}`);
-        if (!text) return;
+        const encodedId = Array.from(new TextEncoder().encode(stopId), byte => byte.toString(16).padStart(2, "0")).join("");
+        const response = await binding.fetch(new Request(`https://schedule-assets.internal/schedules/${FEED_METADATA.version}/${encodedId}.json`));
+        if (!response.ok) return;
 
-        const rows = JSON.parse(text);
+        const rows = await response.json();
         const schedule = buildStopScheduleIndex(rows);
         if (schedule.records.length > 0) {
           schedules.set(stopId, schedule);

@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate:data": "python3 scripts/generate-worker-data.py --gtfs-zip /tmp/GTFS_Realtime.zip --out src/tfi-static.generated.js",
-    "generate:schedules": "python3 scripts/generate-worker-data.py --gtfs-zip /tmp/GTFS_Realtime.zip --out src/tfi-static.generated.js --kv-out-dir data/schedules",
-    "upload:schedules": "node scripts/upload-schedules.mjs",
-    "test": "node scripts/worker-smoke-test.mjs && node scripts/worker-refresh-test.mjs && node scripts/upload-schedules-test.mjs",
+    "generate:data": "npm run generate:schedules",
+    "generate:schedules": "python3 scripts/generate-worker-data.py --gtfs-zip /tmp/GTFS_Realtime.zip --out src/tfi-static.generated.js --assets-dir data/assets",
+    "test": "node scripts/worker-smoke-test.mjs && node scripts/worker-refresh-test.mjs",
+    "test:assets": "node scripts/worker-assets-integration-test.mjs",
     "dev": "wrangler dev",
     "check": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy --minify"
