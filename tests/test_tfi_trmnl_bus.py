@@ -5,6 +5,7 @@ import unittest
 import zipfile
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -54,7 +55,7 @@ class TfiTrmnlBusTests(unittest.TestCase):
             zip_path = Path(tmp) / "gtfs.zip"
             make_static_zip(zip_path)
             store = GTFSStaticStore(zip_path)
-            now = datetime(2026, 7, 1, 12, 0).timestamp()
+            now = datetime(2026, 7, 1, 12, 0, tzinfo=ZoneInfo("Europe/Dublin")).timestamp()
             feed = {
                 "entity": [
                     {
@@ -91,7 +92,7 @@ class TfiTrmnlBusTests(unittest.TestCase):
             zip_path = Path(tmp) / "gtfs.zip"
             make_static_zip(zip_path)
             store = GTFSStaticStore(zip_path)
-            now = datetime(2026, 7, 1, 11, 58).timestamp()
+            now = datetime(2026, 7, 1, 11, 58, tzinfo=ZoneInfo("Europe/Dublin")).timestamp()
             feed = {
                 "entity": [
                     {
@@ -142,3 +143,4 @@ class TfiTrmnlBusTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

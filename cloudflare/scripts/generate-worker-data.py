@@ -3,14 +3,17 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import io
 import json
 import zipfile
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 MAX_BULK_ENTRIES = 2_000
 MAX_BULK_BYTES = 85_000_000
+SNAPSHOT_TTL_SECONDS = 7 * 24 * 3600
 
 
 def rows_from_zip(zip_path: Path, member: str):
@@ -76,7 +79,11 @@ def write_schedule_chunks(
     out_dir: Path,
     prefix: str,
     routes: dict[str, str],
-) -> None:
+    version: str,
+) -> dict:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # Invalidate readiness before parsing, including on malformed input.
+    (out_dir / "tfi-feed-manifest.json").unlink(missing_ok=True)
     trips = {}
     for row in rows_from_zip(zip_path, "trips.txt"):
         trip_id = row.get("trip_id", "")
@@ -98,6 +105,8 @@ def write_schedule_chunks(
         trip_id = row.get("trip_id", "")
         if not stop_id or not trip_id:
             continue
+        if trip_id not in trips:
+            raise ValueError(f"Unknown trip_id {trip_id!r} in stop_times.txt")
 
         event_seconds = gtfs_time_to_seconds(row.get("departure_time", ""))
         if event_seconds is None:
@@ -118,7 +127,8 @@ def write_schedule_chunks(
         )
         row_count += 1
 
-    out_dir.mkdir(parents=True, exist_ok=True)
+    if not schedules:
+        raise ValueError("The GTFS feed has no stop schedules")
     for stale in out_dir.glob(f"{prefix}-*.json"):
         stale.unlink()
 
@@ -139,7 +149,7 @@ def write_schedule_chunks(
 
     for stop_id in sorted(schedules):
         value = json.dumps(schedules[stop_id], ensure_ascii=False, separators=(",", ":"))
-        entry = {"key": f"schedule:{stop_id}", "value": value}
+        entry = {"key": f"schedule:{version}:{stop_id}", "value": value, "expiration_ttl": SNAPSHOT_TTL_SECONDS}
         entry_bytes = len(json.dumps(entry, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + 1
 
         if chunk and (len(chunk) >= MAX_BULK_ENTRIES or chunk_bytes + entry_bytes > MAX_BULK_BYTES):
@@ -150,6 +160,7 @@ def write_schedule_chunks(
 
     flush()
     print(f"Prepared {len(schedules)} stop schedule keys from {row_count} stop_time rows.")
+    return {"schedule_stops": len(schedules), "stop_time_rows": row_count}
 
 
 def main() -> int:
@@ -178,21 +189,36 @@ def main() -> int:
         if row.get("route_id")
     }
     service_calendars = build_service_calendars(zip_path)
+    if not stops or not routes or not service_calendars:
+        raise ValueError("The GTFS feed must contain stops, routes, and service calendars")
+    with zip_path.open("rb") as source:
+        digest = hashlib.sha256()
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+        version = digest.hexdigest()
+    metadata = {
+        "version": version,
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+    }
+
+    if args.kv_out_dir:
+        counts = write_schedule_chunks(zip_path, Path(args.kv_out_dir), args.kv_chunk_prefix, routes, version)
+        manifest = [{"key": f"feed:{version}", "value": json.dumps({**metadata, **counts}, separators=(",", ":")), "expiration_ttl": SNAPSHOT_TTL_SECONDS}]
+        (Path(args.kv_out_dir) / "tfi-feed-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
         f"export const STOPS = {json.dumps(stops, ensure_ascii=False, separators=(',', ':'))};\n"
         f"export const ROUTES = {json.dumps(routes, ensure_ascii=False, separators=(',', ':'))};\n"
-        f"export const SERVICE_CALENDARS = {json.dumps(service_calendars, ensure_ascii=False, separators=(',', ':'))};\n",
+        f"export const SERVICE_CALENDARS = {json.dumps(service_calendars, ensure_ascii=False, separators=(',', ':'))};\n"
+        f"export const FEED_METADATA = {json.dumps(metadata, separators=(',', ':'))};\n",
         encoding="utf-8",
     )
     print(f"Wrote {out_path} with {len(stops)} stops, {len(routes)} routes, and {len(service_calendars)} service calendars.")
-
-    if args.kv_out_dir:
-        write_schedule_chunks(zip_path, Path(args.kv_out_dir), args.kv_chunk_prefix, routes)
 
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

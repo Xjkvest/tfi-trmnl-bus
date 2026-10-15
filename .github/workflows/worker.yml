@@ -1,0 +1,104 @@
+name: Worker and GTFS refresh
+
+on:
+  pull_request:
+    paths: ["cloudflare/**", "src/**", "tests/**", ".github/workflows/worker.yml"]
+  push:
+    branches: [main]
+    paths: ["cloudflare/**", "src/**", "tests/**", ".github/workflows/worker.yml"]
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize snapshot uploads and deploys. Do not cancel an in-flight rollout.
+concurrency:
+  group: worker-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+        working-directory: cloudflare
+      - run: python3 -m unittest discover -s tests
+      - run: npm test
+        working-directory: cloudflare
+      - run: npm run check
+        working-directory: cloudflare
+
+  refresh-and-deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: cloudflare
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check deployment credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Set CLOUDFLARE_API_TOKEN with Workers Scripts and Workers KV Storage edit permissions."; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Set CLOUDFLARE_ACCOUNT_ID for the existing Worker and KV namespace."; exit 1; }
+      - run: npm ci
+      - name: Download a fresh official GTFS snapshot
+        run: |
+          curl --fail --location --retry 3 --max-time 600 \
+            'https://www.transportforireland.ie/transitData/Data/GTFS_Realtime.zip' \
+            --output /tmp/GTFS_Realtime.zip
+      - name: Generate Worker indexes and versioned schedules together
+        run: npm run generate:schedules
+      - run: npm test
+      - run: npm run check
+      - name: Upload schedules and publish snapshot readiness
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run upload:schedules
+      - name: Deploy matching Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy
+      - name: Verify deployed snapshot after KV propagation
+        run: |
+          node --input-type=module <<'JS'
+          import { FEED_METADATA } from './src/tfi-static.generated.js';
+          const url = 'https://tfi-trmnl-bus.xanderjake.workers.dev/health';
+          for (let attempt = 0; attempt < 12; attempt++) {
+            try {
+              const response = await fetch(url, {signal: AbortSignal.timeout(10000)});
+              const body = await response.json();
+              if (response.ok && body.ok && body.feed?.version === FEED_METADATA.version) {
+                console.log(`Healthy snapshot: ${body.feed.version}`);
+                process.exit(0);
+              }
+            } catch (error) { console.log(`Health check attempt ${attempt + 1}: ${error.message}`); }
+            await new Promise(resolve => setTimeout(resolve, 10000));
+          }
+          throw new Error('Deployed Worker did not report the expected ready snapshot. Check Cloudflare deployment and KV logs.');
+          JS

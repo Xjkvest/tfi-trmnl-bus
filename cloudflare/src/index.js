@@ -1,9 +1,10 @@
-import { ROUTES, SERVICE_CALENDARS, STOPS } from "./tfi-static.generated.js";
+import { FEED_METADATA, ROUTES, SERVICE_CALENDARS, STOPS } from "./tfi-static.generated.js";
 
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 45;
 const DEFAULT_TIME_ZONE = "Europe/Dublin";
 const TRIP_UPDATES_URL = "https://api.nationaltransport.ie/gtfsr/v2/TripUpdates?format=json";
+const MAX_FEED_AGE_MS = 48 * 60 * 60 * 1000;
 
 const STOP_BY_ID = new Map(STOPS.map((stop) => [stop.id, stop]));
 const STOP_BY_CODE = new Map();
@@ -38,7 +39,9 @@ export default {
       }
 
       if (url.pathname === "/health") {
-        return jsonResponse({ ok: true });
+        const feed = await feedHealth(env);
+        const ok = !feed.stale && feed.schedules_ready;
+        return jsonResponse({ ok, feed }, ok ? 200 : 503);
       }
 
       if (url.pathname === "/stops") {
@@ -79,6 +82,28 @@ function jsonResponse(payload, status = 200) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+function staticFeedStatus() {
+  const generatedMs = Date.parse(FEED_METADATA.generated_at);
+  const ageMs = Number.isFinite(generatedMs) ? Math.max(0, Date.now() - generatedMs) : null;
+  return {
+    ...FEED_METADATA,
+    age_hours: ageMs === null ? null : Math.round(ageMs / 3_600_000),
+    stale: ageMs === null || ageMs > MAX_FEED_AGE_MS,
+  };
+}
+
+async function feedHealth(env) {
+  const status = { ...staticFeedStatus(), schedules_ready: false };
+  try {
+    const text = await env?.TFI_STOP_SCHEDULES?.get(`feed:${FEED_METADATA.version}`);
+    const manifest = text ? JSON.parse(text) : null;
+    status.schedules_ready = manifest?.version === FEED_METADATA.version && manifest.schedule_stops > 0;
+  } catch {
+    // Health reports an unavailable snapshot without exposing provider errors.
+  }
+  return status;
 }
 
 function htmlResponse(markup, status = 200) {
@@ -210,6 +235,7 @@ async function departuresPayload(request, params, env = {}) {
     departures: [],
     message: "",
     error: "",
+    feed: staticFeedStatus(),
   };
 
   if (stopIds.length === 0) {
@@ -268,8 +294,25 @@ async function departuresPayload(request, params, env = {}) {
   if (debug) {
     payload.debug = debugStats;
   }
-  if (payload.departures.length === 0) {
+  if (debugStats.missing_schedule_rows > 0) {
+    payload.message = "Live and static timetable data may be out of sync. Some live departures are unavailable.";
+  } else if (schedules.size < stopIds.length) {
+    payload.message = "Static timetable data is unavailable for some stops. Showing available live departures.";
+  } else if (payload.feed.stale) {
+    payload.message = "Static timetable data has not refreshed in over 48 hours. Departures may be incomplete.";
+  } else if (payload.departures.length === 0) {
     payload.message = "No upcoming departures.";
+  }
+  if (debugStats.missing_schedule_rows > 0 || schedules.size < stopIds.length || payload.feed.stale) {
+    console.warn(JSON.stringify({
+      message: "Static feed degraded",
+      feed_version: FEED_METADATA.version,
+      stale: payload.feed.stale,
+      selected_stops: stopIds.length,
+      schedule_stops_loaded: schedules.size,
+      selected_updates: debugStats.selected_updates,
+      missing_schedule_rows: debugStats.missing_schedule_rows,
+    }));
   }
   return payload;
 }
@@ -473,7 +516,7 @@ async function loadStopSchedules(env, stopIds) {
   await Promise.all(
     stopIds.map(async (stopId) => {
       try {
-        const text = await binding.get(`schedule:${stopId}`);
+        const text = await binding.get(`schedule:${FEED_METADATA.version}:${stopId}`);
         if (!text) return;
 
         const rows = JSON.parse(text);
@@ -799,6 +842,7 @@ function clampNumber(value, fallback, min, max) {
 }
 
 function numberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -1120,3 +1164,4 @@ function stopFinderHtml() {
 </body>
 </html>`;
 }
+
