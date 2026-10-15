@@ -24,12 +24,15 @@ const warnings = [];
 console.warn = (value) => warnings.push(JSON.parse(value));
 
 function environment(tripId = "NEW_TRIP", manifest = metadata) {
-  return { TFI_STOP_SCHEDULES: { async get(key) {
-    if (key === "feed:snapshot-a") return manifest && JSON.stringify(manifest);
-    if (key === "schedule:snapshot-a:STOP_A") return JSON.stringify([[tripId,"4",12*3600+600,"City Centre","15","City Centre","SERVICE_A"]]);
-    // A different snapshot exists but must never be read by this Worker.
-    if (key === "schedule:STOP_A") return JSON.stringify([["NEW_TRIP","4",12*3600+600]]);
-    return null;
+  return { TFI_SCHEDULE_ASSETS: { async fetch(request) {
+    const path = new URL(request.url || request).pathname;
+    if (path === "/feeds/snapshot-a.json") {
+      return manifest ? Response.json(manifest) : new Response("Not found", {status: 404});
+    }
+    if (path === "/schedules/snapshot-a/53544f505f41.json") {
+      return Response.json([[tripId,"4",12*3600+600,"City Centre","15","City Centre","SERVICE_A"]]);
+    }
+    return new Response("Not found", {status: 404});
   } } };
 }
 
@@ -42,14 +45,14 @@ async function departures(env, absolute = false) {
 }
 
 try {
-  await test("health verifies the uploaded snapshot manifest", async () => {
+  await test("health verifies the deployed asset snapshot manifest", async () => {
     const response = await worker.fetch(new Request("https://test/health"), environment());
     assert.equal(response.status, 200);
     const body = await response.json();
     assert.equal(body.feed.version, "snapshot-a");
     assert.equal(body.feed.schedules_ready, true);
   });
-  await test("missing or mismatched manifests and missing KV make health fail", async () => {
+  await test("missing or mismatched manifests and missing asset bindings make health fail", async () => {
     for (const env of [{}, environment("NEW_TRIP", null), environment("NEW_TRIP", {version:"snapshot-b"})]) {
       const response = await worker.fetch(new Request("https://test/health"), env);
       assert.equal(response.status, 503);
@@ -84,10 +87,12 @@ try {
     assert.equal(payload.departures[0].realtime_source, "absolute_time");
     assert.match(payload.message, /static/i);
   });
-  await test("missing versioned keys never fall back to unversioned schedules", async () => {
+  await test("missing assets never fall back to legacy KV schedules", async () => {
     const env = environment();
-    const get = env.TFI_STOP_SCHEDULES.get;
-    env.TFI_STOP_SCHEDULES.get = key => key.startsWith("schedule:snapshot-a:") ? null : get(key);
+    const fetchAsset = env.TFI_SCHEDULE_ASSETS.fetch;
+    env.TFI_SCHEDULE_ASSETS.fetch = request => new URL(request.url || request).pathname.startsWith("/schedules/")
+      ? new Response("Not found", {status:404}) : fetchAsset(request);
+    env.TFI_STOP_SCHEDULES = {get:async () => {throw new Error("Legacy KV must not be used");}};
     const payload = await departures(env);
     assert.equal(payload.departures.length, 0);
     assert.equal(payload.debug.missing_schedule_rows, 1);

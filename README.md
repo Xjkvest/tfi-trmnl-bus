@@ -7,7 +7,7 @@ Private TRMNL plugin scaffold for showing the next departures from selected Tran
 - Serves a searchable stop picker from the official TFI static GTFS ZIP.
 - Lets TRMNL poll a small JSON payload for selected stops.
 - Fetches NTA GTFS-Realtime TripUpdates with your own subscription key.
-- Recovers delay-only GTFS-Realtime updates from static `stop_times.txt` schedules stored in Cloudflare KV.
+- Recovers delay-only GTFS-Realtime updates from static `stop_times.txt` schedules deployed as free Cloudflare Workers Static Assets.
 - Fills sparse real-time feeds with calendar-valid static timetable rows marked `Scheduled`.
 - Renders the result with TRMNL Framework 3.1 markup and a shared departure-board design system.
 
@@ -48,32 +48,42 @@ curl --fail --location --retry 3 \
 cd cloudflare
 npm ci
 npm run generate:schedules
-npm run upload:schedules
 npm test
 npm run check
 npm run deploy
 ```
 
-`generate:schedules` creates large KV bulk-upload files under `cloudflare/data/`; they are intentionally ignored by Git. `upload:schedules` writes them to the remote `TFI_STOP_SCHEDULES` KV namespace.
+`generate:schedules` writes one JSON schedule file per stop and a feed manifest under `cloudflare/data/assets/`. These generated files are ignored by Git and uploaded automatically by `wrangler deploy` as Workers Static Assets, alongside the Worker code. No separate storage upload is needed.
 
-Always run `generate:schedules` against a fresh ZIP: it generates the embedded stops, routes, calendars, and KV schedules together. Each snapshot uses the ZIP's SHA-256 as its version. The Worker reads only `schedule:<version>:<stop_id>` keys, so uploading a new feed cannot mix its trip IDs with the currently deployed Worker. Upload finishes by publishing `feed:<version>` readiness; a failed chunk stops the upload and deployment. KV propagation can take a minute, so rollout health checks retry.
+Always generate from a fresh ZIP. The embedded stops, routes, calendars, schedule files, and manifest share the ZIP's SHA-256 version. The Worker reads `/schedules/<version>/<hex-encoded-stop-id>.json` through its `TFI_SCHEDULE_ASSETS` binding. A deployment includes the matching asset snapshot, so there is no separate KV refresh or propagation step. Schedule files stay behind the Worker router; the public API paths and TRMNL polling URL are unchanged.
+
+This uses the **Workers Free plan**, without KV, R2, or a paid subscription. [Static Asset storage and requests are free](https://developers.cloudflare.com/workers/static-assets/billing-and-limitations/). The generator rejects snapshots exceeding the free plan's [20,000 files per version or 25 MiB per file](https://developers.cloudflare.com/workers/platform/limits/), rather than silently requiring an upgrade. The current feed needs 10,262 files including its manifest. Live API requests still consume the normal Workers Free request and CPU allowances. GitHub's standard hosted runners are free for this public repository; no paid runner is used.
 
 ### Automated refresh
 
-`.github/workflows/worker.yml` tests Worker changes on pull requests and refreshes production every day at 04:23 UTC, on relevant pushes to `main`, or via **Actions → Worker and GTFS refresh → Run workflow**. It downloads a new ZIP, generates both datasets, runs tests and a dry-run build, uploads schedules, deploys the matching Worker, and checks the deployed feed version. Production runs are serialized.
+`.github/workflows/worker.yml` tests Worker changes on pull requests and refreshes production every day at 04:23 UTC, on relevant pushes to `main`, or via **Actions → Worker and GTFS refresh → Run workflow**. It downloads a new ZIP, generates both datasets, runs tests and a dry-run build, deploys the Worker with its schedule assets, and checks the deployed feed version. Production runs are serialized.
 
 Configure these repository Actions secrets before merging:
 
-- `CLOUDFLARE_API_TOKEN`: a token scoped to the account with **Workers Scripts: Edit** and **Workers KV Storage: Edit** permissions.
-- `CLOUDFLARE_ACCOUNT_ID`: the account containing the existing Worker and `TFI_STOP_SCHEDULES` namespace in `cloudflare/wrangler.jsonc`.
+- `CLOUDFLARE_API_TOKEN`: a token scoped to the account with **Workers Scripts: Edit** permission. The existing token can remain in use; KV permissions are no longer needed.
+- `CLOUDFLARE_ACCOUNT_ID`: the account containing the existing Worker in `cloudflare/wrangler.jsonc`.
 
 Missing secrets fail the deployment job explicitly. No NTA key is needed for generation or health checks. Enable GitHub Actions failure notifications to catch failed refreshes. The workflow never commits regenerated data back to GitHub; production is rebuilt from a fresh download on every successful refresh.
 
-`/health` returns HTTP 503 if the generated snapshot is older than 48 hours, KV is unavailable, or its matching ready manifest is missing. The response includes `feed.version`, `generated_at`, `age_hours`, `stale`, and `schedules_ready`. A healthy response confirms snapshot readiness, not the availability of NTA's authenticated live feed.
+`/health` returns HTTP 503 if the generated snapshot is older than 48 hours, the asset binding is unavailable, or its matching manifest is missing. The response includes `feed.version`, `generated_at`, `age_hours`, `stale`, and `schedules_ready`. A healthy response confirms snapshot readiness, not the availability of NTA's authenticated live feed.
 
 For an authenticated departures request, add `&debug=1` to inspect `selected_updates`, `schedule_stops_loaded`, `missing_schedule_rows`, and `schedule_fallback_rows`. Missing trip matches produce a warning message and structured Cloudflare logs even if static timetable rows fill the board. Logs contain counts and the feed version, never the NTA key. Absolute-time live updates continue to work when static schedules are unavailable.
 
-Versioned schedules and their readiness manifests expire seven days after upload. Daily refreshes renew the active snapshot and bound storage growth while retaining recent snapshots for rollback. The current feed generates about 500 MB of bulk-upload JSON per snapshot; allow KV capacity for retained versions. After seven days without a successful upload, static schedules expire, and the Worker continues to serve available absolute-time live updates with warnings. Existing unversioned `schedule:<stop_id>` keys are no longer used after the first versioned deployment and can then be removed manually. To roll back to a snapshot older than seven days, regenerate and upload that snapshot before deploying its Worker.
+Only the current snapshot is included in each deployment. Assets are tied to Worker versions for consistent rollout and rollback; they do not expire after seven days. A failed refresh leaves the existing deployed snapshot intact. The 48-hour stale warning still detects missed refreshes.
+
+### Migrating from KV
+
+1. Merge the Static Assets change and re-enable **Worker and GTFS refresh** in GitHub Actions if it was disabled after the KV limit error.
+2. Run the workflow on `main` (or let the merge-triggered run finish). Keep the same `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets.
+3. Confirm `/health` returns `ok: true` and `feed.schedules_ready: true`, then force-refresh the TRMNL plugin. No polling URL or NTA key changes are required.
+
+The new deployment does not use KV, so it can succeed even while the old KV write quota is exhausted. No billing activation is required. The old KV namespace is left untouched; after verifying the new deployment and deciding you do not need a rollback to the KV-based Worker, you can delete it manually. No workflow step deletes user data or changes the account plan.
+
 
 Stop finder:
 

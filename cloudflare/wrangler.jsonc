@@ -4,14 +4,14 @@
   "main": "src/index.js",
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
-  "kv_namespaces": [
-    {
-      "binding": "TFI_STOP_SCHEDULES",
-      "id": "10a1d19053c34f03ad4b4b47294d3cf4"
-    }
-  ],
+  "assets": {
+    "directory": "./data/assets",
+    "binding": "TFI_SCHEDULE_ASSETS",
+    "run_worker_first": true
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
   }
 }
+

@@ -53,10 +53,10 @@ try {
     );
 
   const env = {
-    TFI_STOP_SCHEDULES: {
-      async get(key) {
-        assert.equal(key, `schedule:${FEED_METADATA.version}:${stop.id}`);
-        return JSON.stringify([[tripId, "4", scheduledSeconds, "Ballycullen Road"]]);
+    TFI_SCHEDULE_ASSETS: {
+      async fetch(request) {
+        assert.equal(new URL(request.url).pathname, `/schedules/${FEED_METADATA.version}/${Buffer.from(stop.id).toString("hex")}.json`);
+        return Response.json([[tripId, "4", scheduledSeconds, "Ballycullen Road"]]);
       },
     },
   };
@@ -136,10 +136,10 @@ try {
     TFI_SERVICE_CALENDARS: {
       TEST_SERVICE: ["20260701", "20260731", 4, {}],
     },
-    TFI_STOP_SCHEDULES: {
-      async get(key) {
-        assert.equal(key, `schedule:${FEED_METADATA.version}:${stop.id}`);
-        return JSON.stringify(
+    TFI_SCHEDULE_ASSETS: {
+      async fetch(request) {
+        assert.equal(new URL(request.url).pathname, `/schedules/${FEED_METADATA.version}/${Buffer.from(stop.id).toString("hex")}.json`);
+        return Response.json(
           Array.from({ length: 50 }, (_, index) => [
             `STATIC_TRIP_${index + 1}`,
             "5",

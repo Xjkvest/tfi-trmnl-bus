@@ -6,14 +6,15 @@ import csv
 import hashlib
 import io
 import json
+import shutil
+import tempfile
 import zipfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-MAX_BULK_ENTRIES = 2_000
-MAX_BULK_BYTES = 85_000_000
-SNAPSHOT_TTL_SECONDS = 7 * 24 * 3600
+MAX_ASSET_FILES = 20_000
+MAX_ASSET_BYTES = 25 * 1024 * 1024
 
 
 def rows_from_zip(zip_path: Path, member: str):
@@ -74,16 +75,12 @@ def build_service_calendars(zip_path: Path) -> dict[str, list]:
     return services
 
 
-def write_schedule_chunks(
+def write_schedule_assets(
     zip_path: Path,
     out_dir: Path,
-    prefix: str,
     routes: dict[str, str],
     version: str,
 ) -> dict:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    # Invalidate readiness before parsing, including on malformed input.
-    (out_dir / "tfi-feed-manifest.json").unlink(missing_ok=True)
     trips = {}
     for row in rows_from_zip(zip_path, "trips.txt"):
         trip_id = row.get("trip_id", "")
@@ -129,37 +126,28 @@ def write_schedule_chunks(
 
     if not schedules:
         raise ValueError("The GTFS feed has no stop schedules")
-    for stale in out_dir.glob(f"{prefix}-*.json"):
-        stale.unlink()
+    # Reserve one file for the manifest. Never silently require a paid plan.
+    if len(schedules) + 1 > MAX_ASSET_FILES:
+        raise ValueError("The snapshot exceeds the free plan's 20,000 asset files")
 
-    chunk: list[dict[str, str]] = []
-    chunk_bytes = 2
-    chunk_index = 1
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=out_dir.parent) as temporary:
+        staged = Path(temporary) / "assets"
+        schedule_dir = staged / "schedules" / version
+        schedule_dir.mkdir(parents=True)
+        for stop_id, records in schedules.items():
+            content = json.dumps(records, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            if len(content) > MAX_ASSET_BYTES:
+                raise ValueError(f"Schedule for {stop_id!r} exceeds the 25 MiB asset limit")
+            # Hex encoding is shared with the Worker and cannot escape this directory.
+            filename = stop_id.encode("utf-8").hex() + ".json"
+            (schedule_dir / filename).write_bytes(content)
+        # Only replace the previous local snapshot after all files pass validation.
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
+        staged.rename(out_dir)
 
-    def flush() -> None:
-        nonlocal chunk, chunk_bytes, chunk_index
-        if not chunk:
-            return
-        path = out_dir / f"{prefix}-{chunk_index:04d}.json"
-        path.write_text(json.dumps(chunk, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        print(f"Wrote {path} with {len(chunk)} schedule keys.")
-        chunk = []
-        chunk_bytes = 2
-        chunk_index += 1
-
-    for stop_id in sorted(schedules):
-        value = json.dumps(schedules[stop_id], ensure_ascii=False, separators=(",", ":"))
-        entry = {"key": f"schedule:{version}:{stop_id}", "value": value, "expiration_ttl": SNAPSHOT_TTL_SECONDS}
-        entry_bytes = len(json.dumps(entry, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) + 1
-
-        if chunk and (len(chunk) >= MAX_BULK_ENTRIES or chunk_bytes + entry_bytes > MAX_BULK_BYTES):
-            flush()
-
-        chunk.append(entry)
-        chunk_bytes += entry_bytes
-
-    flush()
-    print(f"Prepared {len(schedules)} stop schedule keys from {row_count} stop_time rows.")
+    print(f"Prepared {len(schedules)} schedule assets from {row_count} stop_time rows.")
     return {"schedule_stops": len(schedules), "stop_time_rows": row_count}
 
 
@@ -167,8 +155,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--gtfs-zip", default="/tmp/GTFS_Realtime.zip")
     parser.add_argument("--out", default="cloudflare/src/tfi-static.generated.js")
-    parser.add_argument("--kv-out-dir", default="")
-    parser.add_argument("--kv-chunk-prefix", default="tfi-stop-schedules")
+    parser.add_argument("--assets-dir", default="cloudflare/data/assets")
     args = parser.parse_args()
 
     zip_path = Path(args.gtfs_zip)
@@ -201,10 +188,8 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
     }
 
-    if args.kv_out_dir:
-        counts = write_schedule_chunks(zip_path, Path(args.kv_out_dir), args.kv_chunk_prefix, routes, version)
-        manifest = [{"key": f"feed:{version}", "value": json.dumps({**metadata, **counts}, separators=(",", ":")), "expiration_ttl": SNAPSHOT_TTL_SECONDS}]
-        (Path(args.kv_out_dir) / "tfi-feed-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    assets_dir = Path(args.assets_dir)
+    counts = write_schedule_assets(zip_path, assets_dir, routes, version)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(
@@ -215,6 +200,12 @@ def main() -> int:
         encoding="utf-8",
     )
     print(f"Wrote {out_path} with {len(stops)} stops, {len(routes)} routes, and {len(service_calendars)} service calendars.")
+
+    manifest_dir = assets_dir / "feeds"
+    manifest_dir.mkdir()
+    (manifest_dir / f"{version}.json").write_text(
+        json.dumps({**metadata, **counts}, separators=(",", ":")), encoding="utf-8"
+    )
 
     return 0
 
