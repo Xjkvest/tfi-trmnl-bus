@@ -42,9 +42,11 @@ The Worker project lives in `cloudflare/`. It embeds a compact stop and route in
 Useful commands:
 
 ```sh
+curl --fail --location --retry 3 \
+  https://www.transportforireland.ie/transitData/Data/GTFS_Realtime.zip \
+  --output /tmp/GTFS_Realtime.zip
 cd cloudflare
-npm install
-npm run generate:data
+npm ci
 npm run generate:schedules
 npm run upload:schedules
 npm test
@@ -53,6 +55,25 @@ npm run deploy
 ```
 
 `generate:schedules` creates large KV bulk-upload files under `cloudflare/data/`; they are intentionally ignored by Git. `upload:schedules` writes them to the remote `TFI_STOP_SCHEDULES` KV namespace.
+
+Always run `generate:schedules` against a fresh ZIP: it generates the embedded stops, routes, calendars, and KV schedules together. Each snapshot uses the ZIP's SHA-256 as its version. The Worker reads only `schedule:<version>:<stop_id>` keys, so uploading a new feed cannot mix its trip IDs with the currently deployed Worker. Upload finishes by publishing `feed:<version>` readiness; a failed chunk stops the upload and deployment. KV propagation can take a minute, so rollout health checks retry.
+
+### Automated refresh
+
+`.github/workflows/worker.yml` tests Worker changes on pull requests and refreshes production every day at 04:23 UTC, on relevant pushes to `main`, or via **Actions → Worker and GTFS refresh → Run workflow**. It downloads a new ZIP, generates both datasets, runs tests and a dry-run build, uploads schedules, deploys the matching Worker, and checks the deployed feed version. Production runs are serialized.
+
+Configure these repository Actions secrets before merging:
+
+- `CLOUDFLARE_API_TOKEN`: a token scoped to the account with **Workers Scripts: Edit** and **Workers KV Storage: Edit** permissions.
+- `CLOUDFLARE_ACCOUNT_ID`: the account containing the existing Worker and `TFI_STOP_SCHEDULES` namespace in `cloudflare/wrangler.jsonc`.
+
+Missing secrets fail the deployment job explicitly. No NTA key is needed for generation or health checks. Enable GitHub Actions failure notifications to catch failed refreshes. The workflow never commits regenerated data back to GitHub; production is rebuilt from a fresh download on every successful refresh.
+
+`/health` returns HTTP 503 if the generated snapshot is older than 48 hours, KV is unavailable, or its matching ready manifest is missing. The response includes `feed.version`, `generated_at`, `age_hours`, `stale`, and `schedules_ready`. A healthy response confirms snapshot readiness, not the availability of NTA's authenticated live feed.
+
+For an authenticated departures request, add `&debug=1` to inspect `selected_updates`, `schedule_stops_loaded`, `missing_schedule_rows`, and `schedule_fallback_rows`. Missing trip matches produce a warning message and structured Cloudflare logs even if static timetable rows fill the board. Logs contain counts and the feed version, never the NTA key. Absolute-time live updates continue to work when static schedules are unavailable.
+
+Versioned schedules and their readiness manifests expire seven days after upload. Daily refreshes renew the active snapshot and bound storage growth while retaining recent snapshots for rollback. The current feed generates about 500 MB of bulk-upload JSON per snapshot; allow KV capacity for retained versions. After seven days without a successful upload, static schedules expire, and the Worker continues to serve available absolute-time live updates with warnings. Existing unversioned `schedule:<stop_id>` keys are no longer used after the first versioned deployment and can then be removed manually. To roll back to a snapshot older than seven days, regenerate and upload that snapshot before deploying its Worker.
 
 Stop finder:
 
@@ -65,8 +86,9 @@ Current deployment:
 ```text
 Worker: tfi-trmnl-bus
 URL: https://tfi-trmnl-bus.xanderjake.workers.dev
-Version ID: d98c36cf-8d17-4083-ba9a-29b60aed945c
 ```
+
+Use `/health` to identify the current data snapshot rather than relying on a deployment ID recorded in this README.
 
 ## TRMNL Setup
 
@@ -203,8 +225,11 @@ TRIP_UPDATES_URL=https://api.nationaltransport.ie/gtfsr/v2/TripUpdates?format=js
 
 The first run downloads the static GTFS ZIP if `GTFS_ZIP_PATH` does not exist. It is about 91 MB as of July 1, 2026.
 
+The local Python server does not refresh an existing ZIP or in-memory indexes automatically. To refresh it, stop the server, replace the ZIP with a fresh download, and restart. A fresh local download can work while an older deployed feed fails to match new live `trip_id` values.
+
 ## Sources Checked
 
 - TRMNL Framework 3.1 structure, layout, title bar, item, table, flex, grid, overflow, and gap docs.
 - TRMNL Private Plugin, Polling, Liquid, and custom form field docs.
 - NTA GTFS-R OpenAPI attachment plus current static GTFS ZIP.
+

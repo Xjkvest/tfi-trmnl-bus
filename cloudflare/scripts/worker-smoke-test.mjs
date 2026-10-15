@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
+import { FEED_METADATA } from "../src/tfi-static.generated.js";
 
 const searchResponse = await worker.fetch(new Request("https://worker.example/api/stops/search?query=1278"), {});
 assert.equal(searchResponse.status, 200);
@@ -54,7 +55,7 @@ try {
   const env = {
     TFI_STOP_SCHEDULES: {
       async get(key) {
-        assert.equal(key, `schedule:${stop.id}`);
+        assert.equal(key, `schedule:${FEED_METADATA.version}:${stop.id}`);
         return JSON.stringify([[tripId, "4", scheduledSeconds, "Ballycullen Road"]]);
       },
     },
@@ -137,7 +138,7 @@ try {
     },
     TFI_STOP_SCHEDULES: {
       async get(key) {
-        assert.equal(key, `schedule:${stop.id}`);
+        assert.equal(key, `schedule:${FEED_METADATA.version}:${stop.id}`);
         return JSON.stringify(
           Array.from({ length: 50 }, (_, index) => [
             `STATIC_TRIP_${index + 1}`,
@@ -274,3 +275,4 @@ try {
 }
 
 console.log("Worker smoke test passed.");
+
